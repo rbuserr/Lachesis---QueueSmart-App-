@@ -32,7 +32,7 @@ export default function Home() {
               <li key={route.href}>
                 <Link
                   href={route.href}
-                  className="text-sm text-foreground underline-offset-4 transition-colors hover:text-brand hover:underline"
+                  className="text-sm text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
                 >
                   {route.label}
                   <span className="ml-2 font-mono text-xs text-muted-foreground">
