@@ -68,11 +68,17 @@ export default async function JoinQueueScreen() {
             </CardContent>
 
             <CardFooter>
-              {/* Server action form or Link to confirm modal would go here */}
               <Button asChild className="w-full group">
-                <Link href={`/queue/join/${service.id}`}>
-                  Join {service.name}
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                {/* 
+                  FIX: Added flex layout to the Link, truncated the text span, 
+                  and added shrink-0 to the icon to prevent overflow. 
+                */}
+                <Link 
+                  href={`/queue/join/${service.id}`} 
+                  className="flex items-center justify-center gap-2 overflow-hidden px-4"
+                >
+                  <span className="truncate">Join {service.name}</span>
+                  <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             </CardFooter>
