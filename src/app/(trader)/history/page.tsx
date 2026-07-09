@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Assuming a mock fetcher to match your @/lib/ structure
+// Assuming a mock fetcher to match @/lib/ structure
 // import { getQueueHistory } from "@/lib/trader/get-queue-history";
 
 export default async function HistoryScreen() {
-  // Placeholder for your actual data fetching logic
+  // Placeholder for actual data fetching logic
   // const history = await getQueueHistory();
   
   // Mock data to scaffold the UI
