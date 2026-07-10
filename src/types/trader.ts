@@ -7,6 +7,7 @@ export type QueueOutcome = "served" | "left" | "cancelled";
 export interface Service {
   id: number;
   name: string;
+  description?: string;
   durationMinutes: number;
   priority: Priority;
 }

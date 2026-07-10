@@ -9,7 +9,7 @@ export default function TraderLayout({
   return (
     <div className="min-h-screen">
       <TraderNav traderName={MOCK_TRADER_NAME} />
-      <div className="mx-auto max-w-5xl px-6 py-8 md:px-8">{children}</div>
+      <div className="mx-auto max-w-7xl px-8 py-8">{children}</div>
     </div>
   );
 }

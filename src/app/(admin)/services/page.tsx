@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
   import Image from "next/image";
   import SnakeLogo from "@/components/ui/snake-logo.png";
-import AdminNavbar from "@/components/admin/admin-navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -167,16 +166,14 @@ export default function ServicesPage() {
   };
 
   return (
-    <>
-      <AdminNavbar />
-      <main className="min-h-screen bg-background p-8">
-  
+    <div className="space-y-8">
+
 
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
 
         <div>
 
-          <h1 className="text-4xl font-bold">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Service Management
           </h1>
 
@@ -208,7 +205,7 @@ export default function ServicesPage() {
 
           <CardHeader className="flex flex-row justify-between items-center">
 
-            <CardTitle>Total Services</CardTitle>
+            <CardTitle className="text-base">Total Services</CardTitle>
 
             <ClipboardList className="h-5 w-5 text-primary" />
 
@@ -216,7 +213,7 @@ export default function ServicesPage() {
 
           <CardContent>
 
-            <h2 className="text-4xl font-bold">
+            <h2 className="text-2xl font-semibold">
               {services.length}
             </h2>
 
@@ -228,7 +225,7 @@ export default function ServicesPage() {
 
           <CardHeader className="flex flex-row justify-between items-center">
 
-            <CardTitle>High Priority</CardTitle>
+            <CardTitle className="text-base">High Priority</CardTitle>
 
             <TriangleAlert className="h-5 w-5 text-red-500" />
 
@@ -236,7 +233,7 @@ export default function ServicesPage() {
 
           <CardContent>
 
-            <h2 className="text-4xl font-bold">
+            <h2 className="text-2xl font-semibold">
               {
                 services.filter(
                   (s) => s.priority === "High"
@@ -252,7 +249,7 @@ export default function ServicesPage() {
 
           <CardHeader className="flex flex-row justify-between items-center">
 
-            <CardTitle>Average Duration</CardTitle>
+            <CardTitle className="text-base">Average Duration</CardTitle>
 
             <Timer className="h-5 w-5 text-primary" />
 
@@ -260,7 +257,7 @@ export default function ServicesPage() {
 
           <CardContent>
 
-            <h2 className="text-4xl font-bold">
+            <h2 className="text-2xl font-semibold">
               {Math.round(
                 services.reduce(
                   (sum, s) => sum + s.duration,
@@ -279,7 +276,7 @@ export default function ServicesPage() {
 
         <CardHeader className="flex flex-row justify-between items-center">
 
-          <CardTitle>
+          <CardTitle className="text-base">
             Services
           </CardTitle>
 
@@ -552,7 +549,7 @@ export default function ServicesPage() {
 
     <footer>
 
-          <div className="mt-10 border-t pt-5 text-center text-1xl font-bold text-muted-foreground flex items-center justify-center gap-2">
+          <div className="border-t pt-5 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
             QueueSmart Administrator Portal • Version 1.0
 
             <Image
@@ -565,7 +562,6 @@ export default function ServicesPage() {
           </div>
         </footer>
 
-    </main>
-    </>
+    </div>
   );
 }

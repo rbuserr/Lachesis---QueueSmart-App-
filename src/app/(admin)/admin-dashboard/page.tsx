@@ -10,7 +10,6 @@
   } from "lucide-react";
   import Image from "next/image";
   import SnakeLogo from "@/components/ui/snake-logo.png";
-  import AdminNavbar from "@/components/admin/admin-navbar";
   import { Badge } from "@/components/ui/badge";
   import { Button } from "@/components/ui/button";
   import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,14 +73,12 @@
     ];
 
     return (
-      <>
-        <AdminNavbar />
-        <main className="min-h-screen bg-background p-8">
+      <div className="space-y-8">
 
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between mb-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 
           <div>
-            <h1 className="text-4xl font-bold tracking-tight flex items-center">
+            <h1 className="text-3xl font-semibold tracking-tight">
               Good Morning, Admin
             </h1>
 
@@ -122,7 +119,7 @@
 
         
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4 mb-8">
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
 
           {stats.map((stat) => {
 
@@ -147,7 +144,7 @@
 
                 <CardContent>
 
-                  <h2 className="text-4xl font-bold">
+                  <h2 className="text-2xl font-semibold">
                     {stat.value}
                   </h2>
 
@@ -174,7 +171,7 @@
 
             <CardHeader>
 
-              <CardTitle>
+              <CardTitle className="text-base">
                 Available Services
               </CardTitle>
 
@@ -193,7 +190,7 @@
 
                     <div>
 
-                      <h3 className="font-semibold text-lg">
+                      <h3 className="text-sm font-medium">
                         {service.name}
                       </h3>
 
@@ -231,7 +228,7 @@
 
             <CardHeader>
 
-              <CardTitle>
+              <CardTitle className="text-base">
                 Queue Summary
               </CardTitle>
 
@@ -274,7 +271,7 @@
 
        
 
-        <div className="grid gap-6 lg:grid-cols-2 mt-8">
+        <div className="grid gap-6 lg:grid-cols-2">
 
           
 
@@ -282,7 +279,7 @@
 
             <CardHeader>
 
-              <CardTitle>
+              <CardTitle className="text-base">
                 Recent Activity
               </CardTitle>
 
@@ -315,7 +312,7 @@
 
             <CardHeader>
 
-              <CardTitle>
+              <CardTitle className="text-base">
                 Quick Actions
               </CardTitle>
 
@@ -356,7 +353,7 @@
 
         <footer>
 
-          <div className="mt-10 border-t pt-5 text-center text-1xl font-bold text-muted-foreground flex items-center justify-center gap-2">
+          <div className="border-t pt-5 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
             QueueSmart Administrator Portal • Version 1.0
 
             <Image
@@ -369,7 +366,6 @@
           </div>
         </footer>
 
-      </main>
-      </>
+      </div>
     );
   }

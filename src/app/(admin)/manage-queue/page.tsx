@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
   import Image from "next/image";
   import SnakeLogo from "@/components/ui/snake-logo.png";
-import AdminNavbar from "@/components/admin/admin-navbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,15 +135,13 @@ export default function QueueManagementPage() {
   };
 
   return (
-    <>
-     <AdminNavbar />
-     <main className="min-h-screen bg-background p-8">
-  
+    <div className="space-y-8">
+
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
 
         <div>
 
-          <h1 className="text-4xl font-bold">
+          <h1 className="text-3xl font-semibold tracking-tight">
             Queue Management
           </h1>
 
@@ -175,7 +172,7 @@ export default function QueueManagementPage() {
 
           <CardHeader className="flex flex-row justify-between">
 
-            <CardTitle>Waiting Traders</CardTitle>
+            <CardTitle className="text-base">Waiting Traders</CardTitle>
 
             <Users className="h-5 w-5 text-primary"/>
 
@@ -183,7 +180,7 @@ export default function QueueManagementPage() {
 
           <CardContent>
 
-            <h2 className="text-4xl font-bold">
+            <h2 className="text-2xl font-semibold">
               {queue.length}
             </h2>
 
@@ -195,7 +192,7 @@ export default function QueueManagementPage() {
 
           <CardHeader className="flex flex-row justify-between">
 
-            <CardTitle>Average Wait</CardTitle>
+            <CardTitle className="text-base">Average Wait</CardTitle>
 
             <Clock3 className="h-5 w-5 text-primary"/>
 
@@ -203,7 +200,7 @@ export default function QueueManagementPage() {
 
           <CardContent>
 
-            <h2 className="text-4xl font-bold">
+            <h2 className="text-2xl font-semibold">
               13 min
             </h2>
 
@@ -215,7 +212,7 @@ export default function QueueManagementPage() {
 
           <CardHeader className="flex flex-row justify-between">
 
-            <CardTitle>High Priority</CardTitle>
+            <CardTitle className="text-base">High Priority</CardTitle>
 
             <CircleAlert className="h-5 w-5 text-red-500"/>
 
@@ -223,7 +220,7 @@ export default function QueueManagementPage() {
 
           <CardContent>
 
-            <h2 className="text-4xl font-bold">
+            <h2 className="text-2xl font-semibold">
 
               {
                 queue.filter(
@@ -243,7 +240,7 @@ export default function QueueManagementPage() {
 
         <CardHeader className="flex flex-row justify-between items-center">
 
-          <CardTitle>
+          <CardTitle className="text-base">
             Active Queue
           </CardTitle>
 
@@ -431,7 +428,7 @@ export default function QueueManagementPage() {
 
       <footer>
 
-          <div className="mt-10 border-t pt-5 text-center text-1xl font-bold text-muted-foreground flex items-center justify-center gap-2">
+          <div className="border-t pt-5 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
             QueueSmart Administrator Portal • Version 1.0
 
             <Image
@@ -444,7 +441,6 @@ export default function QueueManagementPage() {
           </div>
         </footer>
 
-    </main>
-    </>
+    </div>
   );
 }
