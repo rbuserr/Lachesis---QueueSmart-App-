@@ -46,7 +46,7 @@ export default async function JoinQueueScreen() {
           <Card key={service.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
-                <CardTitle className="text-xl">{service.name}</CardTitle>
+                <CardTitle className="text-base">{service.name}</CardTitle>
                 {service.priority && (
                   <Badge variant="secondary">High Priority</Badge>
                 )}
@@ -59,11 +59,11 @@ export default async function JoinQueueScreen() {
             <CardContent className="grid gap-2 text-sm text-muted-foreground mt-auto">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                <span>Est. wait: ~{service.estimatedWaitTime || 15} mins</span>
+                <span>Est. wait: ~{service.durationMinutes} mins</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                <span>{service.currentQueueLength || 0} people waiting</span>
+                <span>0 people waiting</span>
               </div>
             </CardContent>
 
