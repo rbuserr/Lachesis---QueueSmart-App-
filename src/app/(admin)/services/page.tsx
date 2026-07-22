@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   Search,
@@ -48,18 +48,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { serviceManager, Service, Priority } from "@/app/modules/service-management/service-management";
+import { useServices } from "@/hooks/use-services";
+import { api } from "@/lib/api-client";
+import type { Priority, Service } from "@/types/domain";
 
 export default function ServicesPage() {
-  const [services, setServices] = useState<Service[]>(serviceManager.getServices());
-
-  // keeps local state synced with the service manager
-  useEffect(() => {
-    const unsubscribe = serviceManager.subscribe(() => {
-      setServices(serviceManager.getServices());
-    });
-    return unsubscribe;
-  }, []);
+  const { services, error: loadError, refresh } = useServices();
 
   const [search, setSearch] = useState("");
 
@@ -69,7 +63,7 @@ export default function ServicesPage() {
   const [serviceName, setServiceName] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("");
-  const [priority, setPriority] = useState<Priority>("Low");
+  const [priority, setPriority] = useState<Priority>("low");
 
   const [errors, setErrors] = useState({
     name: "",
@@ -88,7 +82,7 @@ export default function ServicesPage() {
     setServiceName("");
     setDescription("");
     setDuration("");
-    setPriority("Low");
+    setPriority("low");
     setEditingId(null);
     setErrors({ name: "", description: "", duration: "", form: "" });
   };
@@ -104,7 +98,7 @@ export default function ServicesPage() {
     setEditingId(service.id);
     setServiceName(service.name);
     setDescription(service.description);
-    setDuration(service.expectedDuration.toString());
+    setDuration(service.expectedDurationMinutes.toString());
     setPriority(service.priority);
     setErrors({ name: "", description: "", duration: "", form: "" });
     setOpen(true);
@@ -143,22 +137,23 @@ export default function ServicesPage() {
   };
 
   // creates a new service or updates the one being edited
-  const saveService = () => {
+  const saveService = async () => {
     if (!validateForm()) return;
 
     const payload = {
       name: serviceName,
       description,
-      expectedDuration: Number(duration),
+      expectedDurationMinutes: Number(duration),
       priority,
     };
 
     try {
       if (editingId !== null) {
-        serviceManager.updateService(editingId, payload);
+        await api.services.update(editingId, payload);
       } else {
-        serviceManager.createService(payload);
+        await api.services.create(payload);
       }
+      await refresh();
       setOpen(false);
       resetForm();
     } catch (err) {
@@ -170,13 +165,29 @@ export default function ServicesPage() {
   };
 
   // removes a service by id
-  const deleteService = (id: number) => {
-    serviceManager.deleteService(id);
+  const deleteService = async (id: number) => {
+    try {
+      await api.services.remove(id);
+      await refresh();
+    } catch (error) {
+      setErrors((previous) => ({
+        ...previous,
+        form: error instanceof Error ? error.message : "Unable to delete service.",
+      }));
+    }
   };
 
   // flips a service between open and closed
-  const toggleStatus = (id: number) => {
-    serviceManager.toggleServiceStatus(id);
+  const toggleStatus = async (service: Service) => {
+    try {
+      await api.services.update(service.id, { isOpen: !service.isOpen });
+      await refresh();
+    } catch (error) {
+      setErrors((previous) => ({
+        ...previous,
+        form: error instanceof Error ? error.message : "Unable to update service.",
+      }));
+    }
   };
 
   return (
@@ -205,6 +216,8 @@ export default function ServicesPage() {
 
       </div>
 
+      {loadError && <p className="text-sm text-red-500">{loadError}</p>}
+
       {/* top row summary stats for services */}
       <div className="grid gap-6 md:grid-cols-3">
 
@@ -225,7 +238,7 @@ export default function ServicesPage() {
           </CardHeader>
           <CardContent>
             <h2 className="text-2xl font-semibold">
-              {services.filter((s) => s.priority === "High").length}
+              {services.filter((s) => s.priority === "high").length}
             </h2>
           </CardContent>
         </Card>
@@ -240,7 +253,10 @@ export default function ServicesPage() {
               {services.length === 0
                 ? 0
                 : Math.round(
-                    services.reduce((sum, s) => sum + s.expectedDuration, 0) /
+                    services.reduce(
+                      (sum, s) => sum + s.expectedDurationMinutes,
+                      0
+                    ) /
                       services.length
                   )}{" "}
               min
@@ -355,9 +371,9 @@ export default function ServicesPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Low">Low</SelectItem>
-                      <SelectItem value="Medium">Medium</SelectItem>
-                      <SelectItem value="High">High</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -408,18 +424,18 @@ export default function ServicesPage() {
                   >
                     <TableCell className="font-medium">{service.name}</TableCell>
                     <TableCell className="max-w-sm">{service.description}</TableCell>
-                    <TableCell>{service.expectedDuration} mins</TableCell>
+                    <TableCell>{service.expectedDurationMinutes} mins</TableCell>
                     <TableCell>
                       <Badge
                         variant={
-                          service.priority === "High"
+                          service.priority === "high"
                             ? "destructive"
-                            : service.priority === "Medium"
+                            : service.priority === "medium"
                             ? "secondary"
                             : "outline"
                         }
                       >
-                        {service.priority}
+                      {service.priority[0].toUpperCase() + service.priority.slice(1)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -427,7 +443,7 @@ export default function ServicesPage() {
                       <Badge
                         variant={service.isOpen ? "outline" : "secondary"}
                         className="cursor-pointer"
-                        onClick={() => toggleStatus(service.id)}
+                        onClick={() => void toggleStatus(service)}
                       >
                         {service.isOpen ? "Open" : "Closed"}
                       </Badge>
@@ -444,7 +460,7 @@ export default function ServicesPage() {
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => deleteService(service.id)}
+                          onClick={() => void deleteService(service.id)}
                         >
                           Delete
                         </Button>
