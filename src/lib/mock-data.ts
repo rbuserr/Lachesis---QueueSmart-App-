@@ -1,47 +1,11 @@
 import type {
-  ActiveQueue,
   Notification,
   QueueHistoryEntry,
-  Service,
 } from "@/types/trader";
 
 /** Flip these flags to demo different UI states without code changes. */
 export const MOCK_SCENARIO = {
-  inQueue: false,
   hasNotifications: false,
-};
-
-export const MOCK_TRADER_NAME = "John D.";
-
-export const MOCK_SERVICES: Service[] = [
-  {
-    id: 1,
-    name: "General Account Inquiry",
-    durationMinutes: 10,
-    priority: "low",
-  },
-  {
-    id: 2,
-    name: "Evaluation Phase Verification",
-    durationMinutes: 25,
-    priority: "medium",
-  },
-  {
-    id: 3,
-    name: "Live Trade/Platform Execution Issue",
-    durationMinutes: 5,
-    priority: "high",
-  },
-];
-
-export const MOCK_ACTIVE_QUEUE: ActiveQueue = {
-  id: "ticket-1042",
-  serviceId: 2,
-  position: 3,
-  peopleAhead: 2,
-  estimatedWaitMinutes: 18,
-  status: "waiting",
-  joinedAt: "2026-06-28T09:42:00.000Z",
 };
 
 export const MOCK_NOTIFICATIONS: Notification[] = [

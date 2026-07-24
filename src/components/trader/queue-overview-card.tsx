@@ -25,8 +25,8 @@ function statusLabel(status: ActiveQueue["status"]): string {
       return "WAITING";
     case "almost_ready":
       return "ALMOST READY";
-    case "served":
-      return "SERVED";
+    case "serving":
+      return "BEING SERVED";
   }
 }
 

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Info, ListOrdered } from "lucide-react";
 
 import { QueuePositionHero } from "@/components/trader/queue-position-hero";
+import { LeaveQueueButton } from "@/components/trader/leave-queue-button";
+import { QueueStatusRefresh } from "@/components/trader/queue-status-refresh";
 import { StatusStepper } from "@/components/trader/status-stepper";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,8 @@ import { getServiceById } from "@/lib/trader/get-services";
 
 const alertIconClassName =
   "flex items-center gap-3 [&>svg]:static [&>svg]:shrink-0 [&>svg+div]:translate-y-0 [&>svg~*]:pl-0";
+
+export const dynamic = "force-dynamic";
 
 export default async function QueueStatus() {
   const activeQueue = await getActiveQueue();
@@ -57,6 +61,7 @@ export default async function QueueStatus() {
 
   return (
     <div className="space-y-8">
+      <QueueStatusRefresh />
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Queue Status</h1>
         <p className="text-muted-foreground">
@@ -89,9 +94,10 @@ export default async function QueueStatus() {
         <Button asChild variant="outline">
           <Link href="/dashboard">Back to Dashboard</Link>
         </Button>
-        <Button disabled title="Leave queue will be available in A3">
-          Leave Queue
-        </Button>
+        <LeaveQueueButton
+          entryId={activeQueue.id}
+          canLeave={activeQueue.status !== "serving"}
+        />
       </div>
     </div>
   );

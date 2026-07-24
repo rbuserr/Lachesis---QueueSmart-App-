@@ -3,5 +3,5 @@ import type { QueueHistoryEntry } from "@/types/trader";
 
 export async function getQueueHistory(): Promise<QueueHistoryEntry[]> {
   return MOCK_QUEUE_HISTORY;
-  // A3: return fetch("/api/trader/queue/history").then((r) => r.json());
+  // TODO(history-module): replace mock data with its API integration.
 }

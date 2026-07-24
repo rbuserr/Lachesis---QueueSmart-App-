@@ -49,7 +49,7 @@ export function ServicesList({ services, activeQueue }: ServicesListProps) {
                   {isActive && <Badge variant="outline">ACTIVE</Badge>}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  ~{service.durationMinutes} min
+                  ~{service.expectedDurationMinutes} min service
                   {isDisabled ? " · in queue" : ""}
                 </p>
               </div>

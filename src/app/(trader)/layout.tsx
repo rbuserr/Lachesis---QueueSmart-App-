@@ -1,5 +1,5 @@
 import { TraderNav } from "@/components/trader/trader-nav";
-import { MOCK_TRADER_NAME } from "@/lib/mock-data";
+import { CURRENT_TRADER_NAME } from "@/lib/trader/current-trader";
 
 export default function TraderLayout({
   children,
@@ -8,7 +8,7 @@ export default function TraderLayout({
 }) {
   return (
     <div className="min-h-screen">
-      <TraderNav traderName={MOCK_TRADER_NAME} />
+      <TraderNav traderName={CURRENT_TRADER_NAME} />
       <div className="mx-auto max-w-7xl px-8 py-8">{children}</div>
     </div>
   );

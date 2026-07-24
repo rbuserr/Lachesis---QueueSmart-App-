@@ -4,7 +4,9 @@ import { ServicesList } from "@/components/trader/services-list";
 import { getActiveQueue } from "@/lib/trader/get-active-queue";
 import { getNotifications } from "@/lib/trader/get-notifications";
 import { getServiceById, getServices } from "@/lib/trader/get-services";
-import { MOCK_TRADER_NAME } from "@/lib/mock-data";
+import { CURRENT_TRADER_NAME } from "@/lib/trader/current-trader";
+
+export const dynamic = "force-dynamic";
 
 export default async function UserDashboard() {
   const [activeQueue, services, notifications] = await Promise.all([
@@ -17,7 +19,7 @@ export default async function UserDashboard() {
     ? await getServiceById(activeQueue.serviceId)
     : undefined;
 
-  const firstName = MOCK_TRADER_NAME.split(" ")[0];
+  const firstName = CURRENT_TRADER_NAME.split(" ")[0];
 
   return (
     <div className="space-y-8">
