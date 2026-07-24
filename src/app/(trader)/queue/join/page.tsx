@@ -19,10 +19,13 @@ import { getServiceQueuePreview } from "@/server/wait-time";
 export const dynamic = "force-dynamic";
 
 export default async function JoinQueueScreen() {
+  // grabbing active queue and services so we don't double-book users
   const [services, activeQueue] = await Promise.all([
     getServices(),
     getActiveQueue(),
   ]);
+  
+  // pulling in joshua's wait time logic for the UI previews
   const previews = services.map((service) =>
     getServiceQueuePreview(service.id)
   );
