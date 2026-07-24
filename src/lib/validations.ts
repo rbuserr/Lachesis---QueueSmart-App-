@@ -1,4 +1,4 @@
-// HISTORY MODULE VALIDATIONS (David)
+// HISTORY MODULE VALIDATIONS
 
 export function validateHistoryRecord(data: any): { valid: boolean; errors?: string[] } {
   const errors: string[] = [];
