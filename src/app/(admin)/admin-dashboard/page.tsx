@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users,
@@ -16,48 +15,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-import { serviceManager, Service } from "@/app/modules/service-management/service-management";
-import { queueManager } from "@/app/modules/queue-management/queue-management";
-import { activityLog, ActivityEntry } from "@/app/modules/activity-log/activity-log";
-
-// converts a timestamp into a short relative time string
-function timeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours} hr ago`;
-}
+import { useQueue } from "@/hooks/use-queue";
+import { useServices } from "@/hooks/use-services";
+import { api } from "@/lib/api-client";
 
 export default function AdminDashboard() {
   const router = useRouter();
-
-  const [services, setServices] = useState<Service[]>(serviceManager.getServices());
-  const [queueStats, setQueueStats] = useState(queueManager.getStats());
-  const [queueOpen, setQueueOpen] = useState(queueManager.isQueueOpen());
-  const [activity, setActivity] = useState<ActivityEntry[]>(activityLog.getEntries(6));
-
-  // keeps dashboard state in sync with the underlying managers
-  useEffect(() => {
-    const unsubServices = serviceManager.subscribe(() => {
-      setServices(serviceManager.getServices());
-    });
-    const unsubQueue = queueManager.subscribe(() => {
-      setQueueStats(queueManager.getStats());
-      setQueueOpen(queueManager.isQueueOpen());
-    });
-    const unsubActivity = activityLog.subscribe(() => {
-      setActivity(activityLog.getEntries(6));
-    });
-
-    return () => {
-      unsubServices();
-      unsubQueue();
-      unsubActivity();
-    };
-  }, []);
+  const { services, error: servicesError } = useServices();
+  const {
+    snapshot,
+    error: queueError,
+    refresh: refreshQueue,
+  } = useQueue();
+  const queueStats = snapshot.stats;
+  const queueOpen = snapshot.isOpen;
 
   // summary numbers shown in the top stat cards
   const stats = [
@@ -74,7 +45,7 @@ export default function AdminDashboard() {
       subtitle:
         queueStats.waiting === 0
           ? "No traders waiting"
-          : `Average wait ${queueStats.averageWaitMinutes} min`,
+          : `Estimated wait ${queueStats.averageEstimatedWaitMinutes} min`,
     },
     {
       title: "Services",
@@ -91,8 +62,9 @@ export default function AdminDashboard() {
   ];
 
   // opens or closes the queue via the queue manager
-  const handleToggleQueue = () => {
-    queueManager.toggleQueueStatus();
+  const handleToggleQueue = async () => {
+    await api.queue.setOpen(!queueOpen);
+    await refreshQueue();
   };
 
   return (
@@ -132,6 +104,12 @@ export default function AdminDashboard() {
         </div>
 
       </div>
+
+      {(servicesError || queueError) && (
+        <p className="text-sm text-red-500">
+          {servicesError || queueError}
+        </p>
+      )}
 
       {/* top row of stat cards */}
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
@@ -177,7 +155,7 @@ export default function AdminDashboard() {
                     <div>
                       <h3 className="text-sm font-medium">{service.name}</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Expected Duration: {service.expectedDuration} min
+                        Expected Duration: {service.expectedDurationMinutes} min
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -186,14 +164,15 @@ export default function AdminDashboard() {
                       </Badge>
                       <Badge
                         variant={
-                          service.priority === "High"
+                          service.priority === "high"
                             ? "destructive"
-                            : service.priority === "Medium"
+                            : service.priority === "medium"
                             ? "secondary"
                             : "outline"
                         }
                       >
-                        {service.priority}
+                        {service.priority[0].toUpperCase() +
+                          service.priority.slice(1)}
                       </Badge>
                     </div>
                   </div>
@@ -219,19 +198,20 @@ export default function AdminDashboard() {
                   <div>
                     <p className="font-medium">{service.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {service.expectedDuration} min expected
+                      {service.expectedDurationMinutes} min expected
                     </p>
                   </div>
                   <Badge
                     variant={
-                      service.priority === "High"
+                        service.priority === "high"
                         ? "destructive"
-                        : service.priority === "Medium"
+                          : service.priority === "medium"
                         ? "secondary"
                         : "outline"
                     }
                   >
-                    {service.priority}
+                    {service.priority[0].toUpperCase() +
+                      service.priority.slice(1)}
                   </Badge>
                 </div>
               ))
@@ -241,37 +221,8 @@ export default function AdminDashboard() {
 
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-
-        {/* feed of recent actions from the activity log */}
-        <Card className="transition-all hover:shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-base">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {activity.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                No activity yet.
-              </p>
-            ) : (
-              activity.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-3 border-b pb-3 last:border-none"
-                >
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary" />
-                  <div className="flex-1">
-                    <p className="text-sm">{item.message}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {timeAgo(item.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="grid gap-6">
+        {/* TODO(notification-module): add the assigned notification/activity UI here. */}
         {/* shortcut buttons for common admin actions */}
         <Card className="transition-all hover:shadow-lg">
           <CardHeader>
@@ -281,7 +232,7 @@ export default function AdminDashboard() {
             <Button
               className="justify-start"
               disabled={queueOpen}
-              onClick={handleToggleQueue}
+              onClick={() => void handleToggleQueue()}
             >
               Open Queue
             </Button>
@@ -290,7 +241,7 @@ export default function AdminDashboard() {
               variant="destructive"
               className="justify-start"
               disabled={!queueOpen}
-              onClick={handleToggleQueue}
+              onClick={() => void handleToggleQueue()}
             >
               Close Queue
             </Button>

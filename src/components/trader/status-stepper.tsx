@@ -6,7 +6,7 @@ import type { QueueStatus } from "@/types/trader";
 const steps: { key: QueueStatus; label: string }[] = [
   { key: "waiting", label: "Waiting" },
   { key: "almost_ready", label: "Almost Ready" },
-  { key: "served", label: "Served" },
+  { key: "serving", label: "Being Served" },
 ];
 
 interface StatusStepperProps {

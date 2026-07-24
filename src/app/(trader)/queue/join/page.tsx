@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Clock, Users, ArrowRight } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 
+import { JoinQueueButton } from "@/components/trader/join-queue-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,12 +14,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getServices } from "@/lib/trader/get-services";
 import { getActiveQueue } from "@/lib/trader/get-active-queue";
+import { getServiceQueuePreview } from "@/server/wait-time";
+
+export const dynamic = "force-dynamic";
 
 export default async function JoinQueueScreen() {
   const [services, activeQueue] = await Promise.all([
     getServices(),
     getActiveQueue(),
   ]);
+  const previews = services.map((service) =>
+    getServiceQueuePreview(service.id)
+  );
 
   return (
     <div className="space-y-8">
@@ -42,12 +49,12 @@ export default async function JoinQueueScreen() {
 
       {/* Services Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {services.map((service) => (
+        {previews.map(({ service, waitingCount, estimatedWaitMinutes }) => (
           <Card key={service.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <CardTitle className="text-base">{service.name}</CardTitle>
-                {service.priority && (
+                {service.priority === "high" && (
                   <Badge variant="secondary">High Priority</Badge>
                 )}
               </div>
@@ -59,28 +66,22 @@ export default async function JoinQueueScreen() {
             <CardContent className="grid gap-2 text-sm text-muted-foreground mt-auto">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                <span>Est. wait: ~{service.durationMinutes} mins</span>
+                <span>Est. wait: ~{estimatedWaitMinutes} mins</span>
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                <span>0 people waiting</span>
+                <span>
+                  {waitingCount} {waitingCount === 1 ? "person" : "people"} ahead
+                </span>
               </div>
             </CardContent>
 
             <CardFooter>
-              <Button asChild className="w-full group">
-                {/* 
-                  FIX: Added flex layout to the Link, truncated the text span, 
-                  and added shrink-0 to the icon to prevent overflow. 
-                */}
-                <Link 
-                  href={`/queue/join/${service.id}`} 
-                  className="flex items-center justify-center gap-2 overflow-hidden px-4"
-                >
-                  <span className="truncate">Join {service.name}</span>
-                  <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
+              <JoinQueueButton
+                serviceId={service.id}
+                serviceName={service.name}
+                disabled={Boolean(activeQueue)}
+              />
             </CardFooter>
           </Card>
         ))}

@@ -1,1 +1,4 @@
-export async function GET() { return new Response("Auth API Route"); }
+// TODO(authentication-module): implement registration, login, and role handling.
+export async function GET() {
+  return new Response("Auth API Route");
+}

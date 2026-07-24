@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   Search,
@@ -51,32 +51,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { serviceManager, Service } from "@/app/modules/service-management/service-management";
-import { queueManager, QueueEntry } from "@/app/modules/queue-management/queue-management";
+import { useQueue } from "@/hooks/use-queue";
+import { useServices } from "@/hooks/use-services";
+import { api } from "@/lib/api-client";
 
 export default function QueueManagementPage() {
-
-  const [services, setServices] = useState<Service[]>(serviceManager.getServices());
-  const [queue, setQueue] = useState<QueueEntry[]>(queueManager.getQueue());
-  const [queueOpen, setQueueOpen] = useState(queueManager.isQueueOpen());
-  const [currentlyServing, setCurrentlyServing] = useState<QueueEntry | null>(queueManager.getCurrentlyServing());
-
-  // keeps local state synced with the service and queue managers
-  useEffect(() => {
-    const unsubServices = serviceManager.subscribe(() => {
-      setServices(serviceManager.getServices());
-    });
-    const unsubQueue = queueManager.subscribe(() => {
-      setQueue(queueManager.getQueue());
-      setQueueOpen(queueManager.isQueueOpen());
-      setCurrentlyServing(queueManager.getCurrentlyServing());
-    });
-
-    return () => {
-      unsubServices();
-      unsubQueue();
-    };
-  }, []);
+  const { services, error: servicesError } = useServices();
+  const {
+    snapshot,
+    error: queueError,
+    refresh: refreshQueue,
+  } = useQueue();
+  const queue = snapshot.entries;
+  const queueOpen = snapshot.isOpen;
+  const currentlyServing = snapshot.currentlyServing;
 
   const openServices = services.filter((s) => s.isOpen);
 
@@ -93,16 +81,20 @@ export default function QueueManagementPage() {
   // narrows the queue list down by selected service and search text
   const filteredQueue = queue.filter((user) => {
     const matchesService =
-      selectedService === "All" || user.service === selectedService;
+      selectedService === "All" ||
+      user.serviceId === Number(selectedService);
 
-    const matchesSearch = user.trader
+    const matchesSearch = user.traderName
       .toLowerCase()
       .includes(search.toLowerCase());
 
     return matchesService && matchesSearch;
   });
 
-  const stats = queueManager.getStats();
+  const stats = snapshot.stats;
+  const serviceName = (serviceId: number) =>
+    services.find((service) => service.id === serviceId)?.name ??
+    "Unknown service";
 
   // clears the add-trader form fields and error
   const resetForm = () => {
@@ -118,7 +110,7 @@ export default function QueueManagementPage() {
   };
 
   // validates form input and adds the trader to the queue
-  const addTrader = () => {
+  const addTrader = async () => {
     if (!traderName.trim()) {
       setFormError("Trader name is required.");
       return;
@@ -128,18 +120,18 @@ export default function QueueManagementPage() {
       return;
     }
 
-    const service = services.find((s) => s.name === chosenService);
+    const service = services.find((s) => s.id === Number(chosenService));
     if (!service) {
       setFormError("Selected service could not be found.");
       return;
     }
 
     try {
-      queueManager.addTrader({
-        trader: traderName,
-        service: service.name,
-        priority: service.priority,
+      await api.queue.join({
+        traderName,
+        serviceId: service.id,
       });
+      await refreshQueue();
       setOpen(false);
       resetForm();
     } catch (err) {
@@ -148,33 +140,38 @@ export default function QueueManagementPage() {
   };
 
   // pulls the next waiting trader into "currently serving"
-  const serveNext = () => {
+  const serveNext = async () => {
     setActionError("");
     try {
-      queueManager.serveNext();
+      await api.queue.serveNext();
+      await refreshQueue();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Something went wrong.");
     }
   };
 
   // marks the currently served trader as done
-  const completeService = () => {
-    queueManager.completeService();
+  const completeService = async () => {
+    await api.queue.complete();
+    await refreshQueue();
   };
 
   // removes a specific trader from the queue
-  const removeUser = (id: number) => {
-    queueManager.removeTrader(id);
+  const removeUser = async (id: number) => {
+    await api.queue.leave(id);
+    await refreshQueue();
   };
 
   // moves a trader one spot earlier in the queue
-  const moveUp = (id: number) => {
-    queueManager.moveUp(id);
+  const moveUp = async (id: number) => {
+    await api.queue.move(id, "up");
+    await refreshQueue();
   };
 
   // moves a trader one spot later in the queue
-  const moveDown = (id: number) => {
-    queueManager.moveDown(id);
+  const moveDown = async (id: number) => {
+    await api.queue.move(id, "down");
+    await refreshQueue();
   };
 
   return (
@@ -209,6 +206,12 @@ export default function QueueManagementPage() {
 
       </div>
 
+      {(servicesError || queueError) && (
+        <p className="text-sm text-red-500">
+          {servicesError || queueError}
+        </p>
+      )}
+
       {/* top row summary stats for the queue */}
       <div className="grid gap-6 md:grid-cols-3">
 
@@ -228,7 +231,9 @@ export default function QueueManagementPage() {
             <Clock3 className="h-5 w-5 text-primary"/>
           </CardHeader>
           <CardContent>
-            <h2 className="text-2xl font-semibold">{stats.averageWaitMinutes} min</h2>
+            <h2 className="text-2xl font-semibold">
+              {stats.averageEstimatedWaitMinutes} min
+            </h2>
           </CardContent>
         </Card>
 
@@ -249,7 +254,7 @@ export default function QueueManagementPage() {
         <CardHeader className="flex flex-row justify-between items-center">
           <CardTitle className="text-base">Currently Serving</CardTitle>
           {currentlyServing && (
-            <Button size="sm" onClick={completeService}>
+            <Button size="sm" onClick={() => void completeService()}>
               <Check className="mr-2 h-4 w-4" />
               Mark Complete
             </Button>
@@ -259,24 +264,28 @@ export default function QueueManagementPage() {
           {currentlyServing ? (
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">{currentlyServing.trader}</p>
-                <p className="text-sm text-muted-foreground">{currentlyServing.service}</p>
+                <p className="font-medium">{currentlyServing.traderName}</p>
+                <p className="text-sm text-muted-foreground">
+                  {serviceName(currentlyServing.serviceId)}
+                </p>
               </div>
               <Badge
                 variant={
-                  currentlyServing.priority === "High"
+                  currentlyServing.priority === "high"
                     ? "destructive"
-                    : currentlyServing.priority === "Medium"
+                    : currentlyServing.priority === "medium"
                     ? "secondary"
                     : "outline"
                 }
               >
-                {currentlyServing.priority}
+                {currentlyServing.priority[0].toUpperCase() +
+                  currentlyServing.priority.slice(1)}
               </Badge>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No one is currently being served. Click "Serve Next" to start.
+              No one is currently being served. Click &quot;Serve Next&quot; to
+              start.
             </p>
           )}
         </CardContent>
@@ -301,7 +310,7 @@ export default function QueueManagementPage() {
               <SelectContent>
                 <SelectItem value="All">All Services</SelectItem>
                 {services.map((service) => (
-                  <SelectItem key={service.id} value={service.name}>
+                  <SelectItem key={service.id} value={service.id.toString()}>
                     {service.name}
                   </SelectItem>
                 ))}
@@ -309,7 +318,10 @@ export default function QueueManagementPage() {
             </Select>
 
             {/* primary action: pulls the next waiting trader into "currently serving" */}
-            <Button onClick={serveNext} disabled={!!currentlyServing}>
+            <Button
+              onClick={() => void serveNext()}
+              disabled={!!currentlyServing || queue.length === 0}
+            >
               <Play className="mr-2 h-4 w-4"/>
               Serve Next
             </Button>
@@ -356,8 +368,8 @@ export default function QueueManagementPage() {
                     className="hover:bg-muted/40 transition-colors"
                   >
                     <TableCell className="font-medium">#{index + 1}</TableCell>
-                    <TableCell>{user.trader}</TableCell>
-                    <TableCell>{user.service}</TableCell>
+                    <TableCell>{user.traderName}</TableCell>
+                    <TableCell>{serviceName(user.serviceId)}</TableCell>
                     <TableCell>
                       {new Date(user.joinedAt).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -370,14 +382,15 @@ export default function QueueManagementPage() {
                     <TableCell>
                       <Badge
                         variant={
-                          user.priority === "High"
+                          user.priority === "high"
                             ? "destructive"
-                            : user.priority === "Medium"
+                            : user.priority === "medium"
                             ? "secondary"
                             : "outline"
                         }
                       >
-                        {user.priority}
+                        {user.priority[0].toUpperCase() +
+                          user.priority.slice(1)}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -386,21 +399,21 @@ export default function QueueManagementPage() {
                         <Button
                           size="icon"
                           variant="outline"
-                          onClick={() => moveUp(user.id)}
+                          onClick={() => void moveUp(user.id)}
                         >
                           <ArrowUp className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="outline"
-                          onClick={() => moveDown(user.id)}
+                          onClick={() => void moveDown(user.id)}
                         >
                           <ArrowDown className="h-4 w-4" />
                         </Button>
                         <Button
                           size="icon"
                           variant="destructive"
-                          onClick={() => removeUser(user.id)}
+                          onClick={() => void removeUser(user.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -436,7 +449,7 @@ export default function QueueManagementPage() {
                 </DialogHeader>
 
                 <p className="text-sm text-muted-foreground -mt-2">
-                  For traders who can't join through their own account — e.g. a phone-in request.
+                  For traders who can&apos;t join through their own account — e.g. a phone-in request.
                 </p>
 
                 <div className="space-y-5">
@@ -467,7 +480,10 @@ export default function QueueManagementPage() {
                           </div>
                         ) : (
                           openServices.map((service) => (
-                            <SelectItem key={service.id} value={service.name}>
+                            <SelectItem
+                              key={service.id}
+                              value={service.id.toString()}
+                            >
                               {service.name}
                             </SelectItem>
                           ))
@@ -476,7 +492,7 @@ export default function QueueManagementPage() {
                     </Select>
                   </div>
 
-                  <Button className="w-full" onClick={addTrader}>
+                  <Button className="w-full" onClick={() => void addTrader()}>
                     Add to Queue
                   </Button>
                 </div>
