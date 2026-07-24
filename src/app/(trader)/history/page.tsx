@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History as HistoryIcon, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,18 +12,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
-// Assuming a mock fetcher to match @/lib/ structure
-// import { getQueueHistory } from "@/lib/trader/get-queue-history";
+// wired up my history fetcher here instead of hardcoding the import
+import { getQueueHistory } from "@/lib/trader/get-queue-history";
+
+export const dynamic = "force-dynamic";
 
 export default async function HistoryScreen() {
-  // Placeholder for actual data fetching logic
-  // const history = await getQueueHistory();
-  
-  // Mock data to scaffold the UI
-  const history = [
-    { id: "Q-1004", service: "Margin Call Review", status: "Resolved", date: "2026-07-08T14:30:00Z", duration: "12m" },
-    { id: "Q-1001", service: "Platform Bug Report", status: "Cancelled", date: "2026-07-07T09:15:00Z", duration: "5m" },
-  ];
+  // pulling the mock data from our backend interface for section 2
+  const history = await getQueueHistory();
 
   return (
     <div className="space-y-8">
@@ -36,7 +32,7 @@ export default async function HistoryScreen() {
       </div>
 
       {history.length === 0 ? (
-        // Empty State (Mirrors your status.tsx approach)
+        // Empty State
         <div className="flex flex-col items-center gap-6 py-16 text-center border rounded-xl bg-muted/20">
           <SearchX className="h-12 w-12 text-muted-foreground" />
           <div className="max-w-md space-y-2">
@@ -63,7 +59,7 @@ export default async function HistoryScreen() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {history.map((record) => (
+              {history.map((record: any) => (
                 <TableRow key={record.id}>
                   <TableCell className="font-medium text-muted-foreground">
                     {record.id}
@@ -92,4 +88,5 @@ export default async function HistoryScreen() {
       )}
     </div>
   );
+}
 }
