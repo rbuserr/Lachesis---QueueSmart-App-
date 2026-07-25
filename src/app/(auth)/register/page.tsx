@@ -1,3 +1,6 @@
+//Eduardo's registration page for the QueueSmart application.
+// This page provides a user interface for new users to create an account, including form validation and submission to the registration API endpoint.
+
 "use client"
 
 import { FormEvent, useState } from "react"
@@ -38,6 +41,7 @@ export default function RegisterPage() {
     const [acceptedTerms, setAcceptedTerms] = useState(false)
     const [errors, setErrors] = useState<RegisterErrors>({})
     const [formError, setFormError] = useState("")
+    const [successMessage, setSuccessMessage] = useState("")
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const validateForm = () => {
@@ -58,8 +62,8 @@ export default function RegisterPage() {
 
         if (!password) {
             newErrors.password = "Password is required."
-        } else if (password.length < 6) {
-            newErrors.password = "Password must be at least 6 characters."
+        } else if (password.length < 8) {
+            newErrors.password = "Password must be at least 8 characters."
         }
 
         if (!confirmPassword) {
@@ -79,7 +83,9 @@ export default function RegisterPage() {
         return Object.keys(newErrors).length === 0 && acceptedTerms
     }
 
-    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    // Eduardo's handleSubmit function for the registration form.
+    // This function validates the form inputs and sends a POST request to the registration API endpoint.
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault()
 
         if (!validateForm()) {
@@ -88,11 +94,55 @@ export default function RegisterPage() {
 
         setIsSubmitting(true)
 
-        // Front-end mock registration.
-        // A real backend can replace this later.
-        setTimeout(() => {
-            router.push("/login")
-        }, 500)
+        try {
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name,
+                    email,
+                    password,
+                }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                if (data.errors) {
+                    const backendErrors: RegisterErrors = {}
+
+                    data.errors.forEach((error: string) => {
+                        if (error.toLowerCase().includes("name")) {
+                            backendErrors.name = error
+                        } else if (error.toLowerCase().includes("email")) {
+                            backendErrors.email = error
+                        } else if (error.toLowerCase().includes("password")) {
+                            backendErrors.password = error
+                        }
+                    })
+
+                    setErrors(backendErrors)
+                } else {
+                    setFormError(data.error ?? "Registration failed.")
+                }
+
+                return
+            }
+
+            setSuccessMessage("Account created successfully! Please sign in.")
+
+            setTimeout(() => {
+                router.push("/login")
+            }, 2000)
+
+        } catch {
+            setFormError("Unable to connect to the server.")
+        } finally {
+            setIsSubmitting(false)
+        }
+        
     }
 
     return (
@@ -260,7 +310,7 @@ export default function RegisterPage() {
                                             id="password"
                                             name="password"
                                             type={showPassword ? "text" : "password"}
-                                            placeholder="At least 6 characters"
+                                            placeholder="At least 8 characters"
                                             autoComplete="new-password"
                                             value={password}
                                             onChange={(event) => {
@@ -310,7 +360,7 @@ export default function RegisterPage() {
                                             id="password-requirement"
                                             className="text-xs text-zinc-500"
                                         >
-                                            Use at least 6 characters.
+                                            Use at least 8 characters.
                                         </p>
                                     )}
                                 </div>
@@ -403,6 +453,12 @@ export default function RegisterPage() {
 
                                 {formError && (
                                     <p className="text-sm text-red-400">{formError}</p>
+                                )}
+
+                                {successMessage && (
+                                    <p className="text-sm text-green-400">
+                                        {successMessage}
+                                    </p>
                                 )}
 
                                 <Button

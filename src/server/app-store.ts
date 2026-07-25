@@ -1,11 +1,12 @@
 import "server-only";
 
-import type { QueueEntry, Service } from "@/types/domain";
+import type { QueueEntry, Service, User } from "@/types/domain";
 import type { QueueHistoryEntry } from "@/types/trader"; // Moved to the top
 
 export interface AppStore {
   services: Service[];
   queue: QueueEntry[];
+  users: User[]; // Eduardo's user management
   currentlyServing: QueueEntry | null;
   queueOpen: boolean;
   nextServiceId: number;
@@ -42,6 +43,18 @@ function createInitialStore(): AppStore {
       },
     ],
     queue: [],
+
+    //Eduardo's default admin user for testing purposes. In a real application, this should be handled securely and not hardcoded.
+    users: [
+      {
+        id: "user-1",
+        name: "QueueSmart Administrator",
+        email: "admin@queuesmart.com",
+        password: "Admin123",
+        role: "admin",
+        createdAt: new Date().toISOString(),
+      },
+    ],
     currentlyServing: null,
     queueOpen: true,
     nextServiceId: 4,
@@ -54,8 +67,9 @@ const globalStore = globalThis as typeof globalThis & {
   queueSmartStore?: AppStore;
 };
 
-// One store per Node.js process. Replace this module when persistent storage is added.
-export const appStore = globalStore.queueSmartStore ?? createInitialStore();
+export const appStore =
+  globalStore.queueSmartStore ?? createInitialStore();
+
 globalStore.queueSmartStore = appStore;
 
 // --------------------------------------------------------
