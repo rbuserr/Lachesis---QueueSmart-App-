@@ -14,6 +14,10 @@ export function validateHistoryRecord(
     errors.push("Invalid or missing 'id' (must be a string).");
   }
 
+  if (!record.traderName || typeof record.traderName !== "string") {
+    errors.push("Invalid or missing 'traderName' (must be a string).");
+  }
+
   if (!Number.isInteger(record.serviceId)) {
     errors.push("Invalid or missing 'serviceId' (must be an integer).");
   }

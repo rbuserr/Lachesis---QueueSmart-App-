@@ -16,6 +16,7 @@ export interface Notification {
 
 export interface QueueHistoryEntry {
   id: string;
+  traderName: string;
   serviceId: number;
   joinedAt: string;
   completedAt: string | null;
