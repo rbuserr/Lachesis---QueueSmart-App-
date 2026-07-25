@@ -59,25 +59,38 @@ export default async function HistoryScreen() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {history.map((record: any) => (
+              {history.map((record) => (
                 <TableRow key={record.id}>
                   <TableCell className="font-medium text-muted-foreground">
                     {record.id}
                   </TableCell>
-                  <TableCell>{record.service}</TableCell>
+                  <TableCell>Service #{record.serviceId}</TableCell>
                   <TableCell>
-                    {new Date(record.date).toLocaleDateString("en-US", {
+                    {new Date(record.joinedAt).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
                     })}
                   </TableCell>
-                  <TableCell>{record.duration}</TableCell>
+                  <TableCell>
+                    {record.completedAt
+                      ? `${Math.max(
+                          0,
+                          Math.round(
+                            (new Date(record.completedAt).getTime() -
+                              new Date(record.joinedAt).getTime()) /
+                              60000
+                          )
+                        )} min`
+                      : "In progress"}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Badge
-                      variant={record.status === "Resolved" ? "default" : "secondary"}
+                      variant={
+                        record.outcome === "served" ? "default" : "secondary"
+                      }
                     >
-                      {record.status}
+                      {record.outcome}
                     </Badge>
                   </TableCell>
                 </TableRow>
@@ -88,5 +101,4 @@ export default async function HistoryScreen() {
       )}
     </div>
   );
-}
 }

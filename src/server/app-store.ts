@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { QueueEntry, Service, User } from "@/types/domain";
+import type { QueueHistoryEntry } from "@/types/trader"; // Moved to the top
 
 export interface AppStore {
   services: Service[];
@@ -10,6 +11,7 @@ export interface AppStore {
   queueOpen: boolean;
   nextServiceId: number;
   nextQueueEntryId: number;
+  history: QueueHistoryEntry[]; // 1. Added history to the shared interface
 }
 
 function createInitialStore(): AppStore {
@@ -57,6 +59,7 @@ function createInitialStore(): AppStore {
     queueOpen: true,
     nextServiceId: 4,
     nextQueueEntryId: 1,
+    history: [], // 2. Initialized the empty history array
   };
 }
 
@@ -68,3 +71,18 @@ export const appStore =
   globalStore.queueSmartStore ?? createInitialStore();
 
 globalStore.queueSmartStore = appStore;
+
+// --------------------------------------------------------
+// HISTORY MODULE (Section 2 - David)
+// In-memory data store for queue participation history
+// --------------------------------------------------------
+
+export function getHistoryStore(): QueueHistoryEntry[] {
+  // 3. Pointing to the global appStore to prevent hot-reload data loss
+  return appStore.history;
+}
+
+export function addHistoryRecord(record: QueueHistoryEntry): void {
+  // Unshift adds the newest records to the top of the list
+  appStore.history.unshift(record);
+}

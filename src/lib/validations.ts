@@ -1,24 +1,44 @@
 // HISTORY MODULE VALIDATIONS (David)
 
-export function validateHistoryRecord(data: any): { valid: boolean; errors?: string[] } {
+export function validateHistoryRecord(
+  data: unknown
+): { valid: boolean; errors?: string[] } {
   const errors: string[] = [];
+  const record =
+    typeof data === "object" && data !== null
+      ? (data as Record<string, unknown>)
+      : {};
 
   // Validate Required Fields & Types
-  if (!data.id || typeof data.id !== "string") {
+  if (!record.id || typeof record.id !== "string") {
     errors.push("Invalid or missing 'id' (must be a string).");
   }
-  
-  if (!data.service || typeof data.service !== "string") {
-    errors.push("Invalid or missing 'service' (must be a string).");
-  }
-  
-  if (!data.status || typeof data.status !== "string") {
-    errors.push("Invalid or missing 'status' (must be a string).");
+
+  if (!Number.isInteger(record.serviceId)) {
+    errors.push("Invalid or missing 'serviceId' (must be an integer).");
   }
 
-  // Validate Field Length Limits
-  if (data.service && data.service.length > 100) {
-    errors.push("Service name exceeds maximum length of 100 characters.");
+  if (
+    typeof record.joinedAt !== "string" ||
+    Number.isNaN(Date.parse(record.joinedAt))
+  ) {
+    errors.push("Invalid or missing 'joinedAt' timestamp.");
+  }
+
+  if (
+    record.completedAt !== null &&
+    (typeof record.completedAt !== "string" ||
+      Number.isNaN(Date.parse(record.completedAt)))
+  ) {
+    errors.push("'completedAt' must be a timestamp or null.");
+  }
+
+  if (
+    record.outcome !== "served" &&
+    record.outcome !== "left" &&
+    record.outcome !== "cancelled"
+  ) {
+    errors.push("Outcome must be served, left, or cancelled.");
   }
 
   if (errors.length > 0) {
