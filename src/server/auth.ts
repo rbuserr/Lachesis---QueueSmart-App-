@@ -18,9 +18,13 @@ export interface LoginUserInput {
 }
 
 function toPublicUser(user: User): PublicUser {
-    const { password: _password, ...publicUser } = user;
-
-    return publicUser;
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+    };
 }
 
 export function findUserByEmail(email: string): User | undefined {
