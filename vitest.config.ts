@@ -16,7 +16,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text"],
-      include: ["src/server/queue.ts", "src/server/wait-time.ts"],
+      include: [
+        "src/app/api/auth/login/route.ts",
+        "src/app/api/auth/register/route.ts",
+        "src/lib/validations.ts",
+        "src/server/auth.ts",
+        "src/server/queue.ts",
+        "src/server/wait-time.ts",
+      ],
       thresholds: {
         branches: 75,
         functions: 80,
