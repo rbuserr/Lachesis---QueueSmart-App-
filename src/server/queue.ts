@@ -1,15 +1,38 @@
 import "server-only";
 
-import { appStore } from "@/server/app-store";
+import { validateHistoryRecord } from "@/lib/validations";
+import { addHistoryRecord, appStore } from "@/server/app-store";
 import { AppError } from "@/server/errors";
 import { cloneQueueEntry, getQueueStats } from "@/server/wait-time";
 import type { Priority, QueueEntry, QueueSnapshot } from "@/types/domain";
+import type { QueueHistoryEntry, QueueOutcome } from "@/types/trader";
 
 const priorityRank: Record<Priority, number> = {
   high: 0,
   medium: 1,
   low: 2,
 };
+
+function recordHistory(entry: QueueEntry, outcome: QueueOutcome): void {
+  const record: QueueHistoryEntry = {
+    id: `Q-${entry.id}`,
+    traderName: entry.traderName,
+    serviceId: entry.serviceId,
+    joinedAt: entry.joinedAt,
+    completedAt: new Date().toISOString(),
+    outcome,
+  };
+  const validation = validateHistoryRecord(record);
+
+  if (!validation.valid) {
+    throw new AppError(
+      `Unable to save queue history: ${validation.errors?.join(" ")}`,
+      500
+    );
+  }
+
+  addHistoryRecord(record);
+}
 
 export async function getQueueSnapshot(): Promise<QueueSnapshot> {
   return {
@@ -80,8 +103,9 @@ export async function leaveQueue(id: number): Promise<void> {
     throw new AppError("Queue entry not found.", 404);
   }
 
+  const entry = appStore.queue[index];
+  recordHistory(entry, "left");
   appStore.queue.splice(index, 1);
-  // TODO(history-module): record a "left" outcome here.
 }
 
 export async function serveNext(): Promise<QueueEntry | null> {
@@ -100,10 +124,11 @@ export async function serveNext(): Promise<QueueEntry | null> {
 
 export async function completeCurrentService(): Promise<QueueEntry | null> {
   const completed = appStore.currentlyServing;
-  appStore.currentlyServing = null;
+  if (!completed) return null;
 
-  // TODO(history-module): record a "served" outcome here.
-  return completed ? cloneQueueEntry(completed) : null;
+  recordHistory(completed, "served");
+  appStore.currentlyServing = null;
+  return cloneQueueEntry(completed);
 }
 
 export async function moveQueueEntry(

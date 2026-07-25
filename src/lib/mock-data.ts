@@ -33,6 +33,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
 export const MOCK_QUEUE_HISTORY: QueueHistoryEntry[] = [
   {
     id: "hist-1",
+    traderName: "John D.",
     serviceId: 1,
     joinedAt: "2026-06-20T14:30:00.000Z",
     completedAt: "2026-06-20T14:45:00.000Z",
@@ -40,6 +41,7 @@ export const MOCK_QUEUE_HISTORY: QueueHistoryEntry[] = [
   },
   {
     id: "hist-2",
+    traderName: "John D.",
     serviceId: 3,
     joinedAt: "2026-06-15T09:10:00.000Z",
     completedAt: "2026-06-15T09:18:00.000Z",
