@@ -1,7 +1,9 @@
-import { MOCK_QUEUE_HISTORY } from "@/lib/mock-data";
+import "server-only";
+import { getHistoryStore } from "@/server/app-store";
 import type { QueueHistoryEntry } from "@/types/trader";
 
 export async function getQueueHistory(): Promise<QueueHistoryEntry[]> {
-  return MOCK_QUEUE_HISTORY;
-  // TODO(history-module): replace mock data with its API integration.
+  // Replaced mock data with actual integration to the shared in-memory store
+  return getHistoryStore();
 }
+
