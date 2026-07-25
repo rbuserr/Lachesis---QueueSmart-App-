@@ -38,8 +38,8 @@ export default function LoginPage() {
 
     if (!password) {
       newErrors.password = "Password is required."
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters."
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters."
     }
 
     setErrors(newErrors)
@@ -47,7 +47,9 @@ export default function LoginPage() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  // Eduardo's handleSubmit function for the login form.
+  // This function validates the form inputs, sends a POST request to the login API route, and handles the response accordingly.
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (!validateForm()) {
@@ -56,10 +58,43 @@ export default function LoginPage() {
 
     setIsSubmitting(true)
 
-    // Mock login for the front-end assignment.
-    setTimeout(() => {
-      router.push("/dashboard")
-    }, 500)
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setErrors({
+          password: data.error ?? "Login failed.",
+        })
+        return
+      }
+
+      // Save logged-in user for this assignment
+      localStorage.setItem("currentUser", JSON.stringify(data.user))
+
+      // Redirect based on role
+      if (data.user.role === "admin") {
+        router.push("/admin-dashboard")
+      } else {
+        router.push("/dashboard")
+      }
+    } catch {
+      setErrors({
+        password: "Unable to connect to the server.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -259,8 +294,8 @@ export default function LoginPage() {
 
                 <div className="rounded-lg border border-zinc-800 bg-[#08090b] p-4">
                   <p className="text-xs leading-5 text-zinc-500">
-                    Demo note: Authentication is mocked for this assignment.
-                    Enter any valid email and a password with at least six
+                    Demo note: Authentication is powered by the QueueSmart backend. Use a registered account or the administrator credentials.
+                    Enter any valid email and a password with at least eight
                     characters.
                   </p>
                 </div>

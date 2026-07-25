@@ -58,3 +58,17 @@ export interface ServiceQueuePreview {
   waitingCount: number;
   estimatedWaitMinutes: number;
 }
+
+//Eduardo's User Management Types
+export type UserRole = "user" | "admin";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+  createdAt: string;
+}
+
+export type PublicUser = Omit<User, "password">;
