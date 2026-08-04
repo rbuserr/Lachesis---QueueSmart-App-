@@ -1,19 +1,34 @@
+import { requireSessionUser } from "@/server/api-auth";
 import { errorResponse } from "@/server/errors";
 import { getQueueSnapshot, joinQueue } from "@/server/queue";
 
 export async function GET() {
-  // TODO(authentication-module): return an admin or trader-appropriate view.
-  return Response.json(await getQueueSnapshot());
+  try {
+    await requireSessionUser();
+    return Response.json(await getQueueSnapshot());
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
   try {
+    const user = await requireSessionUser();
     const input = (await request.json()) as {
-      traderName: string;
+      traderName?: string;
       serviceId: number;
     };
-    // TODO(authentication-module): derive traderName from the signed-in user.
-    return Response.json(await joinQueue(input), { status: 201 });
+
+    // Traders always join as themselves; admins may set a display name for demos.
+    const traderName =
+      user.role === "admin" && input.traderName?.trim()
+        ? input.traderName.trim()
+        : user.name;
+
+    return Response.json(
+      await joinQueue({ traderName, serviceId: input.serviceId }),
+      { status: 201 },
+    );
   } catch (error) {
     return errorResponse(error);
   }

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import SnakeLogo from "@/components/ui/snake-logo.png";
+import { Button } from "@/components/ui/button";
+import { logoutClient } from "@/lib/auth/logout-client";
 import { cn } from "@/lib/utils";
 
 export interface PortalNavLink {
@@ -45,9 +47,19 @@ export function PortalNav({
             <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-medium">{userPrimary}</p>
-          <p className="text-xs text-muted-foreground">{userSecondary}</p>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-sm font-medium">{userPrimary}</p>
+            <p className="text-xs text-muted-foreground">{userSecondary}</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void logoutClient()}
+          >
+            Sign out
+          </Button>
         </div>
       </div>
       <nav className="mx-auto flex max-w-7xl gap-6 overflow-x-auto px-8">
@@ -62,7 +74,7 @@ export function PortalNav({
                 "border-b-2 pb-3 text-sm font-medium transition-colors",
                 isActive
                   ? "border-brand text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
               {item.label}

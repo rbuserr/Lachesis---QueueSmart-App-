@@ -81,7 +81,7 @@ Domain models live in `prisma/schema.prisma`. Generated types: `@/generated/pris
 
 Login/register persist to Neon (`UserCredential` + `UserProfile`) with bcrypt hashes via `src/server/auth.ts` and `src/server/password.ts`.
 
-Session cookie + `localStorage` identify the logged-in trader (replaces hardcoded `"John D."`). Middleware protects trader/admin pages by role.
+Session cookie + `localStorage` identify the logged-in trader (replaces hardcoded `"John D."`). Middleware protects trader/admin pages by role. API routes require a session (admin mutations require `role: admin`). Use **Sign out** in the portal nav to clear the session.
 
 ### Team split (remaining)
 

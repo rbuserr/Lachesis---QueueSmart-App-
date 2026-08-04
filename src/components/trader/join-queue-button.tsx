@@ -25,18 +25,14 @@ export function JoinQueueButton({
     setError("");
     try {
       const user = readSessionUserClient();
-      const traderName = user?.name.trim();
-
-      if (!traderName) {
+      if (!user) {
         setError("Please log in before joining a queue.");
         router.push("/login");
         return;
       }
 
-      await api.queue.join({
-        traderName,
-        serviceId,
-      });
+      // Server derives trader name from the session cookie for role=user.
+      await api.queue.join({ serviceId });
       router.push("/queue/status");
       router.refresh();
     } catch (joinError) {

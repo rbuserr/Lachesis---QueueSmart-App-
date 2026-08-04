@@ -3,7 +3,9 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { POST as loginRoute } from "@/app/api/auth/login/route";
+import { POST as logoutRoute } from "@/app/api/auth/logout/route";
 import { POST as registerRoute } from "@/app/api/auth/register/route";
+import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import {
   validateLoginInput,
   validateRegisterInput,
@@ -234,11 +236,18 @@ describe("Authentication API routes", () => {
       }),
     );
     expect(login.status).toBe(200);
+    expect(login.cookies.get(SESSION_COOKIE_NAME)?.value).toContain(
+      "api@example.com",
+    );
     expect(await login.json()).toMatchObject({
       success: true,
       message: "Login successful",
       user: { email: "api@example.com", role: "user" },
     });
+
+    const logout = await logoutRoute();
+    expect(logout.status).toBe(200);
+    expect(logout.cookies.get(SESSION_COOKIE_NAME)?.value).toBe("");
   });
 
   it("returns validation errors without creating an account", async () => {
