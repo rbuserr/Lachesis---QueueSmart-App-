@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import SnakeLogo from "@/components/ui/snake-logo.png"
+import { saveSessionUserClient } from "@/lib/auth/session"
 
 type LoginErrors = {
   email?: string
@@ -79,8 +80,7 @@ export default function LoginPage() {
         return
       }
 
-      // Save logged-in user for this assignment
-      localStorage.setItem("currentUser", JSON.stringify(data.user))
+      saveSessionUserClient(data.user)
 
       // Redirect based on role
       if (data.user.role === "admin") {

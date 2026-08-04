@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api-client";
-import { CURRENT_TRADER_NAME } from "@/lib/trader/current-trader";
+import { readSessionUserClient } from "@/lib/auth/session";
 
 export function JoinQueueButton({
   serviceId,
@@ -24,16 +24,24 @@ export function JoinQueueButton({
     setJoining(true);
     setError("");
     try {
+      const user = readSessionUserClient();
+      const traderName = user?.name.trim();
+
+      if (!traderName) {
+        setError("Please log in before joining a queue.");
+        router.push("/login");
+        return;
+      }
+
       await api.queue.join({
-        // TODO(authentication-module): the API should derive this from the session.
-        traderName: CURRENT_TRADER_NAME,
+        traderName,
         serviceId,
       });
       router.push("/queue/status");
       router.refresh();
     } catch (joinError) {
       setError(
-        joinError instanceof Error ? joinError.message : "Unable to join queue."
+        joinError instanceof Error ? joinError.message : "Unable to join queue.",
       );
     } finally {
       setJoining(false);

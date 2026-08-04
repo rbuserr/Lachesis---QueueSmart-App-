@@ -2,24 +2,25 @@ import { NotificationsSummary } from "@/components/trader/notifications-summary"
 import { QueueOverviewCard } from "@/components/trader/queue-overview-card";
 import { ServicesList } from "@/components/trader/services-list";
 import { getActiveQueue } from "@/lib/trader/get-active-queue";
+import { getCurrentTraderName } from "@/lib/trader/current-trader";
 import { getNotifications } from "@/lib/trader/get-notifications";
 import { getServiceById, getServices } from "@/lib/trader/get-services";
-import { CURRENT_TRADER_NAME } from "@/lib/trader/current-trader";
 
 export const dynamic = "force-dynamic";
 
 export default async function UserDashboard() {
-  const [activeQueue, services, notifications] = await Promise.all([
+  const [activeQueue, services, notifications, traderName] = await Promise.all([
     getActiveQueue(),
     getServices(),
     getNotifications(),
+    getCurrentTraderName(),
   ]);
 
   const activeService = activeQueue
     ? await getServiceById(activeQueue.serviceId)
     : undefined;
 
-  const firstName = CURRENT_TRADER_NAME.split(" ")[0];
+  const firstName = (traderName ?? "Trader").split(" ")[0];
 
   return (
     <div className="space-y-8">

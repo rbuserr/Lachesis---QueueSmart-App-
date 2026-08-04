@@ -3,6 +3,10 @@
 
 import { NextResponse } from "next/server";
 
+import {
+  serializeSessionUser,
+  SESSION_COOKIE_NAME,
+} from "@/lib/auth/session";
 import { validateLoginInput } from "@/lib/validations";
 import { loginUser } from "@/server/auth";
 
@@ -45,7 +49,7 @@ export async function POST(request: Request) {
       password: input.password as string,
     });
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: true,
         message: "Login successful",
@@ -53,6 +57,15 @@ export async function POST(request: Request) {
       },
       { status: 200 },
     );
+
+    response.cookies.set(SESSION_COOKIE_NAME, serializeSessionUser(user), {
+      path: "/",
+      sameSite: "lax",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return response;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to log in";

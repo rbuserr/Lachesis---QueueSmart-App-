@@ -81,6 +81,8 @@ Domain models live in `prisma/schema.prisma`. Generated types: `@/generated/pris
 
 Login/register persist to Neon (`UserCredential` + `UserProfile`) with bcrypt hashes via `src/server/auth.ts` and `src/server/password.ts`.
 
+Session cookie + `localStorage` identify the logged-in trader (replaces hardcoded `"John D."`). Middleware protects trader/admin pages by role.
+
 ### Team split (remaining)
 
 | Area | Tables | Touch points |
