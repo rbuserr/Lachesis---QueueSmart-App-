@@ -1,0 +1,146 @@
+// QueueSmart A4 — hybrid schema
+// A4 tables + fields needed by the current A3 app (e.g. isOpen, traderName, serving)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+enum QueueLifecycleStatus {
+  open
+  closed
+}
+
+enum QueueEntryStatus {
+  waiting
+  serving
+  served
+  canceled
+}
+
+enum NotificationStatus {
+  sent
+  viewed
+}
+
+enum QueueOutcome {
+  served
+  left
+  cancelled
+}
+
+/// A4: UserCredentials — auth only (password is hashed, never plain text)
+model UserCredential {
+  id           String   @id @default(cuid())
+  email        String   @unique @db.VarChar(100)
+  passwordHash String
+  role         UserRole @default(user)
+  createdAt    DateTime @default(now())
+
+  profile       UserProfile?
+  queueEntries  QueueEntry[]
+  notifications Notification[]
+  history       QueueHistory[]
+}
+
+/// A4: UserProfile — profile details, email references credentials
+model UserProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  fullName    String  @db.VarChar(50)
+  email       String  @unique @db.VarChar(100)
+  contactInfo String? @db.VarChar(100)
+  preferences Json?
+
+  user UserCredential @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A4: Service (+ hybrid isOpen used by current admin/trader UI)
+model Service {
+  id                      Int      @id @default(autoincrement())
+  name                    String   @db.VarChar(100)
+  description             String   @db.VarChar(500)
+  expectedDurationMinutes Int
+  priority                Priority
+  isOpen                  Boolean  @default(true)
+
+  queues  Queue[]
+  history QueueHistory[]
+}
+
+/// A4: Queue — active queue for a service
+model Queue {
+  id        Int                  @id @default(autoincrement())
+  serviceId Int
+  status    QueueLifecycleStatus @default(open)
+  createdAt DateTime             @default(now())
+
+  service Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  entries QueueEntry[]
+
+  @@index([serviceId, status])
+}
+
+/// A4: QueueEntry (+ hybrid traderName/priority/serving for current queue logic)
+model QueueEntry {
+  id         Int              @id @default(autoincrement())
+  queueId    Int
+  userId     String?
+  traderName String           @db.VarChar(100)
+  serviceId  Int
+  priority   Priority
+  position   Int
+  joinedAt   DateTime         @default(now())
+  status     QueueEntryStatus @default(waiting)
+
+  queue Queue           @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user  UserCredential? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([queueId, status])
+  @@index([userId])
+}
+
+/// A4: Notification / History (notification feed)
+model Notification {
+  id        String             @id @default(cuid())
+  userId    String
+  message   String             @db.VarChar(500)
+  timestamp DateTime           @default(now())
+  status    NotificationStatus @default(sent)
+
+  user UserCredential @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+/// Hybrid: queue participation history (existing trader history UI)
+model QueueHistory {
+  id          String       @id @default(cuid())
+  userId      String?
+  traderName  String       @db.VarChar(100)
+  serviceId   Int
+  joinedAt    DateTime
+  completedAt DateTime?
+  outcome     QueueOutcome
+
+  user    UserCredential? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  service Service         @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([serviceId])
+}
