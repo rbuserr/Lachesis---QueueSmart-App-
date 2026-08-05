@@ -32,6 +32,15 @@ yarn-error.log*
 .env
 .env*.local
 
+# Prisma generated client (run `npm run db:generate`)
+/src/generated/prisma
+
+# Prisma-installed local agent skills (not part of the app)
+/.agents
+/.claude
+/.windsurf
+/skills-lock.json
+
 # vercel
 .vercel
 
@@ -41,3 +50,5 @@ next-env.d.ts
 
 # local team docs (share manually, not in repo)
 /_docs
+
+/src/generated/prisma

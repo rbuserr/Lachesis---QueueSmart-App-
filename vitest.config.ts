@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { fileURLToPath, URL } from "node:url";
 
 import { defineConfig } from "vitest/config";
@@ -18,9 +20,11 @@ export default defineConfig({
       reporter: ["text"],
       include: [
         "src/app/api/auth/login/route.ts",
+        "src/app/api/auth/logout/route.ts",
         "src/app/api/auth/register/route.ts",
         "src/lib/validations.ts",
         "src/server/auth.ts",
+        "src/server/password.ts",
         "src/server/queue.ts",
         "src/server/wait-time.ts",
       ],

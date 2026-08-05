@@ -46,7 +46,7 @@ export const api = {
   },
   queue: {
     snapshot: () => request<QueueSnapshot>("/api/queue"),
-    join: (input: { traderName: string; serviceId: number }) =>
+    join: (input: { serviceId: number; traderName?: string }) =>
       request<QueueEntry>("/api/queue", {
         method: "POST",
         body: JSON.stringify(input),

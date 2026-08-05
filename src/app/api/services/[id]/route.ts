@@ -1,3 +1,4 @@
+import { requireAdminUser, requireSessionUser } from "@/server/api-auth";
 import { AppError, errorResponse } from "@/server/errors";
 import {
   deleteService,
@@ -16,9 +17,10 @@ async function parseId(params: Promise<{ id: string }>): Promise<number> {
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    await requireSessionUser();
     const service = await getService(await parseId(params));
     if (!service) throw new AppError("Service not found.", 404);
     return Response.json(service);
@@ -29,10 +31,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    // TODO(authentication-module): require an administrator session.
+    await requireAdminUser();
     const updates = (await request.json()) as UpdateServiceInput;
     return Response.json(await updateService(await parseId(params), updates));
   } catch (error) {
@@ -42,10 +44,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    // TODO(authentication-module): require an administrator session.
+    await requireAdminUser();
     await deleteService(await parseId(params));
     return new Response(null, { status: 204 });
   } catch (error) {

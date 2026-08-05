@@ -1,14 +1,16 @@
+import { requireSessionUser } from "@/server/api-auth";
+import { errorResponse } from "@/server/errors";
 import { buildActiveQueue } from "@/server/wait-time";
 
-export async function GET(request: Request) {
-  const traderName = new URL(request.url).searchParams.get("traderName")?.trim();
-  // TODO(authentication-module): derive the trader identity from the session.
-  if (!traderName) {
-    return Response.json({ error: "Trader name is required." }, { status: 400 });
-  }
+export async function GET() {
+  try {
+    const user = await requireSessionUser();
+    const activeQueue = buildActiveQueue(user.name);
 
-  const activeQueue = buildActiveQueue(traderName);
-  return activeQueue
-    ? Response.json(activeQueue)
-    : Response.json({ error: "Active queue not found." }, { status: 404 });
+    return activeQueue
+      ? Response.json(activeQueue)
+      : Response.json({ error: "Active queue not found." }, { status: 404 });
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
