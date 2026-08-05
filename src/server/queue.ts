@@ -1,155 +1,248 @@
 import "server-only";
 
-import { validateHistoryRecord } from "@/lib/validations";
-import { addHistoryRecord, appStore } from "@/server/app-store";
+import { prisma } from "@/server/db";
 import { AppError } from "@/server/errors";
 import { cloneQueueEntry, getQueueStats } from "@/server/wait-time";
-import type { Priority, QueueEntry, QueueSnapshot } from "@/types/domain";
-import type { QueueHistoryEntry, QueueOutcome } from "@/types/trader";
+import type { Priority, QueueSnapshot } from "@/types/domain";
 
-const priorityRank: Record<Priority, number> = {
+// Priority map for calculating DB insertion indexes
+const priorityRank: Record<Priority | string, number> = {
   high: 0,
   medium: 1,
   low: 2,
 };
 
-function recordHistory(entry: QueueEntry, outcome: QueueOutcome): void {
-  const record: QueueHistoryEntry = {
-    id: `Q-${entry.id}`,
-    traderName: entry.traderName,
-    serviceId: entry.serviceId,
-    joinedAt: entry.joinedAt,
-    completedAt: new Date().toISOString(),
-    outcome,
-  };
-  const validation = validateHistoryRecord(record);
-
-  if (!validation.valid) {
-    throw new AppError(
-      `Unable to save queue history: ${validation.errors?.join(" ")}`,
-      500
-    );
-  }
-
-  addHistoryRecord(record);
-}
-
 export async function getQueueSnapshot(): Promise<QueueSnapshot> {
+  const entries = await prisma.queueEntry.findMany({
+    where: { status: "waiting" },
+    orderBy: { position: "asc" },
+  });
+
+  const currentlyServing = await prisma.queueEntry.findFirst({
+    where: { status: "serving" },
+  });
+
+  const openQueue = await prisma.queue.findFirst({
+    where: { status: "open" },
+  });
+
   return {
-    entries: appStore.queue.map(cloneQueueEntry),
-    currentlyServing: appStore.currentlyServing
-      ? cloneQueueEntry(appStore.currentlyServing)
-      : null,
-    isOpen: appStore.queueOpen,
-    stats: getQueueStats(),
+    entries: entries.map((e) => cloneQueueEntry(e as any)) as any,
+    currentlyServing: currentlyServing ? (cloneQueueEntry(currentlyServing as any) as any) : null,
+    isOpen: !!openQueue,
+    stats: await getQueueStats(),
   };
 }
 
 export async function joinQueue(input: {
   traderName: string;
   serviceId: number;
-}): Promise<QueueEntry> {
+  userId?: string; 
+}) {
   const traderName = input.traderName.trim();
-  if (!traderName) {
-    throw new AppError("Trader name is required.");
-  }
-  if (!appStore.queueOpen) {
-    throw new AppError("Queue is currently closed.", 409);
-  }
+  if (!traderName) throw new AppError("Trader name is required.");
 
-  const service = appStore.services.find((item) => item.id === input.serviceId);
-  if (!service) {
-    throw new AppError("Service not found.", 404);
-  }
-  if (!service.isOpen) {
-    throw new AppError("This service is currently closed.", 409);
-  }
+  const service = await prisma.service.findUnique({
+    where: { id: input.serviceId },
+    include: { queues: { where: { status: "open" } } },
+  });
+
+  if (!service) throw new AppError("Service not found.", 404);
+  if (!service.isOpen) throw new AppError("This service is currently closed.", 409);
+
+  const activeQueue = service.queues[0];
+  if (!activeQueue) throw new AppError("Queue is currently closed.", 409);
 
   const normalizedName = traderName.toLowerCase();
-  const alreadyQueued =
-    appStore.queue.some(
-      (entry) => entry.traderName.toLowerCase() === normalizedName
-    ) ||
-    appStore.currentlyServing?.traderName.toLowerCase() === normalizedName;
-  if (alreadyQueued) {
-    throw new AppError("This trader is already in the queue.", 409);
-  }
+  const alreadyQueued = await prisma.queueEntry.findFirst({
+    where: {
+      traderName: { equals: normalizedName, mode: "insensitive" },
+      status: { in: ["waiting", "serving"] },
+    },
+  });
 
-  const entry: QueueEntry = {
-    id: appStore.nextQueueEntryId++,
-    traderName,
-    serviceId: service.id,
-    priority: service.priority,
-    joinedAt: new Date().toISOString(),
-  };
+  if (alreadyQueued) throw new AppError("This trader is already in the queue.", 409);
 
-  // Priority groups are served high-to-low; arrival order is preserved in each group.
-  const insertionIndex = appStore.queue.findIndex(
-    (queued) => priorityRank[queued.priority] > priorityRank[entry.priority]
-  );
-  if (insertionIndex === -1) {
-    appStore.queue.push(entry);
-  } else {
-    appStore.queue.splice(insertionIndex, 0, entry);
-  }
+  const entry = await prisma.$transaction(async (tx) => {
+    const waitingEntries = await tx.queueEntry.findMany({
+      where: { status: "waiting" },
+      orderBy: { position: "asc" },
+    });
 
-  // TODO(notification-module): trigger the user-joined notification here.
-  return cloneQueueEntry(entry);
+    const entryPriorityRank = priorityRank[service.priority] ?? 2;
+    let targetPosition = waitingEntries.length; 
+
+    for (let i = 0; i < waitingEntries.length; i++) {
+      if ((priorityRank[waitingEntries[i].priority] ?? 2) > entryPriorityRank) {
+        targetPosition = i;
+        break;
+      }
+    }
+
+    if (targetPosition < waitingEntries.length) {
+      await tx.queueEntry.updateMany({
+        where: { status: "waiting", position: { gte: targetPosition } },
+        data: { position: { increment: 1 } },
+      });
+    }
+
+    const newEntry = await tx.queueEntry.create({
+      data: {
+        queueId: activeQueue.id,
+        userId: input.userId,
+        traderName,
+        serviceId: service.id,
+        priority: service.priority,
+        position: targetPosition,
+        status: "waiting",
+      },
+    });
+
+    if (input.userId) {
+      await tx.notification.create({
+        data: {
+          userId: input.userId,
+          message: `You successfully joined the queue for ${service.name}.`,
+          status: "sent",
+        },
+      });
+    }
+
+    return newEntry;
+  });
+
+  return cloneQueueEntry(entry as any) as any;
 }
 
 export async function leaveQueue(id: number): Promise<void> {
-  const index = appStore.queue.findIndex((entry) => entry.id === id);
-  if (index === -1) {
-    throw new AppError("Queue entry not found.", 404);
-  }
+  await prisma.$transaction(async (tx) => {
+    const entry = await tx.queueEntry.findUnique({ where: { id } });
+    if (!entry || entry.status !== "waiting") {
+      throw new AppError("Queue entry not found or not waiting.", 404);
+    }
 
-  const entry = appStore.queue[index];
-  recordHistory(entry, "left");
-  appStore.queue.splice(index, 1);
+    await tx.queueEntry.update({
+      where: { id },
+      data: { status: "canceled", position: -1 },
+    });
+
+    await tx.queueEntry.updateMany({
+      where: { status: "waiting", position: { gt: entry.position } },
+      data: { position: { decrement: 1 } },
+    });
+
+    await tx.queueHistory.create({
+      data: {
+        userId: entry.userId,
+        traderName: entry.traderName,
+        serviceId: entry.serviceId,
+        joinedAt: entry.joinedAt,
+        completedAt: new Date(),
+        outcome: "cancelled",
+      },
+    });
+  });
 }
 
-export async function serveNext(): Promise<QueueEntry | null> {
-  if (appStore.currentlyServing) {
-    throw new AppError(
-      "Finish the current trader before serving the next one.",
-      409
-    );
-  }
+export async function serveNext() {
+  return await prisma.$transaction(async (tx) => {
+    const currentlyServing = await tx.queueEntry.findFirst({
+      where: { status: "serving" },
+    });
+    
+    if (currentlyServing) {
+      throw new AppError("Finish the current trader before serving the next one.", 409);
+    }
 
-  const next = appStore.queue.shift() ?? null;
-  appStore.currentlyServing = next;
-  // TODO(notification-module): notify the next waiting trader when they are close.
-  return next ? cloneQueueEntry(next) : null;
+    const next = await tx.queueEntry.findFirst({
+      where: { status: "waiting" },
+      orderBy: { position: "asc" },
+    });
+
+    if (!next) return null;
+
+    const updatedNext = await tx.queueEntry.update({
+      where: { id: next.id },
+      data: { status: "serving", position: -1 },
+    });
+
+    await tx.queueEntry.updateMany({
+      where: { status: "waiting" },
+      data: { position: { decrement: 1 } },
+    });
+
+    const upcoming = await tx.queueEntry.findMany({
+      where: { status: "waiting", userId: { not: null }, position: { in: [0, 1] } },
+      take: 2,
+    });
+
+    for (const user of upcoming) {
+      if (user.userId) {
+        await tx.notification.create({
+          data: {
+            userId: user.userId,
+            message: `Get ready, ${user.traderName}! You are close to being served.`,
+            status: "sent",
+          },
+        });
+      }
+    }
+
+    return cloneQueueEntry(updatedNext as any) as any;
+  });
 }
 
-export async function completeCurrentService(): Promise<QueueEntry | null> {
-  const completed = appStore.currentlyServing;
-  if (!completed) return null;
+export async function completeCurrentService() {
+  return await prisma.$transaction(async (tx) => {
+    const completed = await tx.queueEntry.findFirst({
+      where: { status: "serving" },
+    });
+    
+    if (!completed) return null;
 
-  recordHistory(completed, "served");
-  appStore.currentlyServing = null;
-  return cloneQueueEntry(completed);
+    await tx.queueEntry.update({
+      where: { id: completed.id },
+      data: { status: "served" },
+    });
+
+    await tx.queueHistory.create({
+      data: {
+        userId: completed.userId,
+        traderName: completed.traderName,
+        serviceId: completed.serviceId,
+        joinedAt: completed.joinedAt,
+        completedAt: new Date(),
+        outcome: "served",
+      },
+    });
+
+    return cloneQueueEntry(completed as any) as any;
+  });
 }
 
-export async function moveQueueEntry(
-  id: number,
-  direction: "up" | "down"
-): Promise<void> {
-  const index = appStore.queue.findIndex((entry) => entry.id === id);
-  if (index === -1) {
-    throw new AppError("Queue entry not found.", 404);
-  }
+export async function moveQueueEntry(id: number, direction: "up" | "down"): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const entry = await tx.queueEntry.findUnique({ where: { id } });
+    if (!entry || entry.status !== "waiting") throw new AppError("Queue entry not found.", 404);
 
-  const targetIndex = direction === "up" ? index - 1 : index + 1;
-  if (targetIndex < 0 || targetIndex >= appStore.queue.length) return;
+    const targetPosition = direction === "up" ? entry.position - 1 : entry.position + 1;
+    if (targetPosition < 0) return;
 
-  [appStore.queue[index], appStore.queue[targetIndex]] = [
-    appStore.queue[targetIndex],
-    appStore.queue[index],
-  ];
+    const swapTarget = await tx.queueEntry.findFirst({
+      where: { status: "waiting", position: targetPosition },
+    });
+
+    if (!swapTarget) return;
+
+    await tx.queueEntry.update({ where: { id: entry.id }, data: { position: targetPosition } });
+    await tx.queueEntry.update({ where: { id: swapTarget.id }, data: { position: entry.position } });
+  });
 }
 
 export async function setQueueOpen(isOpen: boolean): Promise<boolean> {
-  appStore.queueOpen = isOpen;
-  return appStore.queueOpen;
+  const status = isOpen ? "open" : "closed";
+  await prisma.queue.updateMany({
+    data: { status },
+  });
+  return isOpen;
 }

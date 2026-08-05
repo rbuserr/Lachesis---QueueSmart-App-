@@ -5,7 +5,9 @@ import { buildActiveQueue } from "@/server/wait-time";
 export async function GET() {
   try {
     const user = await requireSessionUser();
-    const activeQueue = buildActiveQueue(user.name);
+    
+    // Added await here to prepare for the database integration in wait-time.ts
+    const activeQueue = await buildActiveQueue(user.name);
 
     return activeQueue
       ? Response.json(activeQueue)

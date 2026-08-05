@@ -4,7 +4,16 @@ import { setQueueOpen } from "@/server/queue";
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdminUser();
+    const user = await requireAdminUser();
+    
+    // A3 Feedback Fix: Strictly enforce authenticated administrator access
+    if (user && user.role !== "admin") {
+      return Response.json(
+        { error: "Forbidden: Admin access required." }, 
+        { status: 403 }
+      );
+    }
+
     const { isOpen } = (await request.json()) as { isOpen: boolean };
     if (typeof isOpen !== "boolean") {
       return Response.json(
