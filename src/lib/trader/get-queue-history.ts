@@ -1,14 +1,31 @@
 import "server-only";
 
-import { getCurrentTraderName } from "@/lib/trader/current-trader";
-import { getHistoryStore } from "@/server/app-store";
+import { readSessionUserServer } from "@/lib/auth/session.server";
+import { prisma } from "@/server/db";
 import type { QueueHistoryEntry } from "@/types/trader";
 
 export async function getQueueHistory(): Promise<QueueHistoryEntry[]> {
-  const traderName = await getCurrentTraderName();
-  if (!traderName) {
+  const user = await readSessionUserServer();
+
+  if (!user) {
     return [];
   }
 
-  return getHistoryStore().filter((record) => record.traderName === traderName);
+  const history = await prisma.queueHistory.findMany({
+    where: {
+      userId: user.id,
+    },
+    orderBy: {
+      joinedAt: "desc",
+    },
+  });
+
+  return history.map((record) => ({
+    id: record.id,
+    traderName: record.traderName,
+    serviceId: record.serviceId,
+    joinedAt: record.joinedAt.toISOString(),
+    completedAt: record.completedAt?.toISOString() ?? null,
+    outcome: record.outcome,
+  }));
 }

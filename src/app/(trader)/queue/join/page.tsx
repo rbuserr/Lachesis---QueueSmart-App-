@@ -26,8 +26,8 @@ export default async function JoinQueueScreen() {
   ]);
   
   // pulling in joshua's wait time logic for the UI previews
-  const previews = services.map((service) =>
-    getServiceQueuePreview(service.id)
+  const previews = await Promise.all(
+    services.map((service) => getServiceQueuePreview(service.id)),
   );
 
   return (
