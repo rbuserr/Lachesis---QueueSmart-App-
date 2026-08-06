@@ -26,9 +26,14 @@ export async function POST(request: Request) {
         : user.name;
 
     return Response.json(
-      await joinQueue({ traderName, serviceId: input.serviceId }),
+      await joinQueue({
+        traderName,
+        serviceId: input.serviceId,
+        userId: user.role === "user" ? user.id : undefined,
+      }),
       { status: 201 },
     );
+    
   } catch (error) {
     return errorResponse(error);
   }
