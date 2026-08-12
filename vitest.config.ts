@@ -14,6 +14,7 @@ export default defineConfig({
     },
   },
   test: {
+    fileParallelism: false,
     environment: "node",
     coverage: {
       provider: "v8",

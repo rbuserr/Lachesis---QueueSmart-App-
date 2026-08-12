@@ -1,6 +1,6 @@
 import "server-only";
 
-import { appStore } from "@/server/app-store";
+import { prisma } from "@/server/db";
 import { AppError } from "@/server/errors";
 import type {
   CreateServiceInput,
@@ -11,7 +11,12 @@ import type {
 
 const priorities: Priority[] = ["low", "medium", "high"];
 
-function validateService(input: CreateServiceInput): void {
+function validateService(input: {
+  name: string;
+  description: string;
+  expectedDurationMinutes: number;
+  priority: Priority;
+}): void {
   if (!input.name.trim()) {
     throw new AppError("Service name is required.");
   }
@@ -20,6 +25,9 @@ function validateService(input: CreateServiceInput): void {
   }
   if (!input.description.trim()) {
     throw new AppError("Description is required.");
+  }
+  if (input.description.trim().length > 500) {
+    throw new AppError("Description cannot exceed 500 characters.");
   }
   if (
     !Number.isFinite(input.expectedDurationMinutes) ||
@@ -35,16 +43,17 @@ function validateService(input: CreateServiceInput): void {
 export async function listServices(options?: {
   openOnly?: boolean;
 }): Promise<Service[]> {
-  const services = options?.openOnly
-    ? appStore.services.filter((service) => service.isOpen)
-    : appStore.services;
+  const services = await prisma.service.findMany({
+    where: options?.openOnly ? { isOpen: true } : undefined,
+    orderBy: { id: "asc" },
+  });
 
-  return services.map((service) => ({ ...service }));
+  return services as unknown as Service[];
 }
 
 export async function getService(id: number): Promise<Service | null> {
-  const service = appStore.services.find((item) => item.id === id);
-  return service ? { ...service } : null;
+  const service = await prisma.service.findUnique({ where: { id } });
+  return service as unknown as Service | null;
 }
 
 export async function createService(
@@ -57,51 +66,82 @@ export async function createService(
   };
   validateService(normalized);
 
-  const service: Service = {
-    id: appStore.nextServiceId++,
-    ...normalized,
-    isOpen: true,
-  };
-  appStore.services.push(service);
+  // Create the Service and its initial open Queue together so they either
+  // both succeed or both fail — no service can exist without a queue.
+  const service = await prisma.service.create({
+    data: {
+      name: normalized.name,
+      description: normalized.description,
+      expectedDurationMinutes: normalized.expectedDurationMinutes,
+      priority: normalized.priority,
+      isOpen: true,
+      queues: {
+        create: {
+          status: "open",
+        },
+      },
+    },
+  });
 
-  return { ...service };
+  return service as unknown as Service;
 }
 
 export async function updateService(
   id: number,
   updates: UpdateServiceInput
 ): Promise<Service> {
-  const index = appStore.services.findIndex((service) => service.id === id);
-  if (index === -1) {
+  const existing = await prisma.service.findUnique({ where: { id } });
+  if (!existing) {
     throw new AppError("Service not found.", 404);
   }
 
-  const existing = appStore.services[index];
-  const merged: Service = {
-    ...existing,
-    ...updates,
+  const merged = {
     name: updates.name?.trim() ?? existing.name,
     description: updates.description?.trim() ?? existing.description,
+    expectedDurationMinutes:
+      updates.expectedDurationMinutes ?? existing.expectedDurationMinutes,
+    priority: (updates.priority ?? existing.priority) as Priority,
+    isOpen: updates.isOpen ?? existing.isOpen,
   };
 
   validateService(merged);
-  appStore.services[index] = merged;
 
-  return { ...merged };
+  const updated = await prisma.service.update({
+    where: { id },
+    data: merged,
+  });
+
+  return updated as unknown as Service;
 }
 
 export async function deleteService(id: number): Promise<void> {
-  const index = appStore.services.findIndex((service) => service.id === id);
-  if (index === -1) {
+  const existing = await prisma.service.findUnique({ where: { id } });
+  if (!existing) {
     throw new AppError("Service not found.", 404);
   }
 
-  const isInUse =
-    appStore.queue.some((entry) => entry.serviceId === id) ||
-    appStore.currentlyServing?.serviceId === id;
-  if (isInUse) {
-    throw new AppError("A service with active queue entries cannot be deleted.", 409);
+  const activeEntryCount = await prisma.queueEntry.count({
+    where: {
+      serviceId: id,
+      status: { in: ["waiting", "serving"] },
+    },
+  });
+
+  if (activeEntryCount > 0) {
+    throw new AppError(
+      "A service with active queue entries cannot be deleted.",
+      409
+    );
   }
 
-  appStore.services.splice(index, 1);
+  try {
+    // Cascades to Queue rows automatically (onDelete: Cascade in schema).
+    // Will throw if QueueHistory rows reference this service (onDelete: Restrict).
+    await prisma.service.delete({ where: { id } });
+  } catch (err) {
+    throw new AppError(
+      "This service has queue history and cannot be deleted.",
+      409
+    );
+  }
 }
