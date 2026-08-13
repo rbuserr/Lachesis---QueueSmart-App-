@@ -9,21 +9,56 @@ import type {
   ServiceQueuePreview,
 } from "@/types/domain";
 
-// Helper to map service durations efficiently (prevents N+1 DB queries)
-async function getServiceDurations(): Promise<Map<number, number>> {
+// SMART FEATURE: Dynamic Wait Time Estimator
+// Calculates service durations using a moving average of recent historical completion times 
+// rather than relying on static expected durations.
+async function getSmartServiceDurations(): Promise<Map<number, number>> {
   const services = await prisma.service.findMany({
     select: { id: true, expectedDurationMinutes: true },
   });
-  return new Map(services.map((s) => [s.id, s.expectedDurationMinutes]));
+
+  const durationMap = new Map<number, number>();
+
+  for (const service of services) {
+    // Fetch the last 20 successfully served entries to calculate a recent moving average
+    const recentHistory = await prisma.queueHistory.findMany({
+      where: {
+        serviceId: service.id,
+        outcome: "served",
+        completedAt: { not: null },
+      },
+      orderBy: { completedAt: 'desc' },
+      take: 20,
+    });
+
+    if (recentHistory.length === 0) {
+      // Fallback to static expected time if no historical data exists yet
+      durationMap.set(service.id, service.expectedDurationMinutes);
+      continue;
+    }
+
+    // Calculate the total wait time for these historical entries in milliseconds
+    const totalMs = recentHistory.reduce((sum, record) => {
+      // We can safely assert completedAt is not null due to our Prisma where clause
+      const diff = record.completedAt!.getTime() - record.joinedAt.getTime();
+      return sum + diff;
+    }, 0);
+
+    // Convert to minutes and round. Enforce a minimum of 1 minute.
+    const avgMinutes = Math.round(totalMs / recentHistory.length / (1000 * 60));
+    durationMap.set(service.id, Math.max(1, avgMinutes));
+  }
+
+  return durationMap;
 }
 
 export async function estimateWaitForQueuePosition(targetPosition: number): Promise<number> {
-  const durations = await getServiceDurations();
-  
+  const durations = await getSmartServiceDurations();
+
   const serving = await prisma.queueEntry.findFirst({
     where: { status: "serving" },
   });
-  
+
   let totalMinutes = serving ? (durations.get(serving.serviceId) || 0) : 0;
 
   const entriesAhead = await prisma.queueEntry.findMany({
@@ -39,7 +74,7 @@ export async function estimateWaitForQueuePosition(targetPosition: number): Prom
 
 export async function buildActiveQueue(traderName: string): Promise<ActiveQueue | null> {
   const normalizedName = traderName.trim().toLowerCase();
-  
+
   const serving = await prisma.queueEntry.findFirst({
     where: { status: "serving" },
   });
@@ -84,12 +119,12 @@ export async function getQueueStats(): Promise<QueueStats> {
     where: { status: "waiting" },
     orderBy: { position: "asc" },
   });
-  
-  const durations = await getServiceDurations();
+
+  const durations = await getSmartServiceDurations();
   const serving = await prisma.queueEntry.findFirst({
     where: { status: "serving" },
   });
-  
+
   let currentWait = serving ? (durations.get(serving.serviceId) || 0) : 0;
   let totalWaitSum = 0;
   let highPriorityCount = 0;
@@ -112,6 +147,7 @@ export async function getQueueStats(): Promise<QueueStats> {
 
 export async function getServiceQueuePreview(serviceId: number): Promise<ServiceQueuePreview> {
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
+  
   if (!service) {
     throw new AppError("Service not found.", 404);
   }
@@ -119,13 +155,13 @@ export async function getServiceQueuePreview(serviceId: number): Promise<Service
   const serving = await prisma.queueEntry.findFirst({
     where: { status: "serving" },
   });
-  
+
   const waitingEntries = await prisma.queueEntry.findMany({
     where: { status: "waiting" },
   });
-  
-  const durations = await getServiceDurations();
-  
+
+  const durations = await getSmartServiceDurations();
+
   let estimatedWaitMinutes = serving ? (durations.get(serving.serviceId) || 0) : 0;
   for (const entry of waitingEntries) {
     estimatedWaitMinutes += durations.get(entry.serviceId) || 0;
@@ -139,7 +175,7 @@ export async function getServiceQueuePreview(serviceId: number): Promise<Service
       expectedDurationMinutes: service.expectedDurationMinutes,
       priority: service.priority,
       isOpen: service.isOpen
-    } as any, 
+    } as any,
     waitingCount: waitingEntries.length + (serving ? 1 : 0),
     estimatedWaitMinutes,
   } as any;
