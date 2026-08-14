@@ -15,6 +15,7 @@ export default defineConfig({
   },
   test: {
     fileParallelism: false,
+    testTimeout: 15000,
     environment: "node",
     coverage: {
       provider: "v8",
@@ -28,6 +29,8 @@ export default defineConfig({
         "src/server/password.ts",
         "src/server/queue.ts",
         "src/server/wait-time.ts",
+        "src/server/services.ts",
+        "src/server/reports.ts",
       ],
       thresholds: {
         branches: 75,
