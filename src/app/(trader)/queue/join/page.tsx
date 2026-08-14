@@ -36,7 +36,8 @@ export default async function JoinQueueScreen() {
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Join a Queue</h1>
         <p className="text-muted-foreground">
-          Select a support service to connect with a risk manager.
+          Select a support service to connect with a risk manager. Wait times
+          use recent completion history when available.
         </p>
       </div>
 
@@ -52,7 +53,15 @@ export default async function JoinQueueScreen() {
 
       {/* Services Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {previews.map(({ service, waitingCount, estimatedWaitMinutes }) => (
+        {previews.map(
+          ({
+            service,
+            waitingCount,
+            estimatedWaitMinutes,
+            typicalServiceMinutes,
+            waitEstimateSource,
+            historySampleSize,
+          }) => (
           <Card key={service.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
@@ -77,6 +86,12 @@ export default async function JoinQueueScreen() {
                   {waitingCount} {waitingCount === 1 ? "person" : "people"} ahead
                 </span>
               </div>
+              <p className="text-xs leading-relaxed">
+                Typical handling ~{typicalServiceMinutes} min
+                {waitEstimateSource === "historical"
+                  ? ` · from last ${historySampleSize} completions`
+                  : " · configured baseline (no history yet)"}
+              </p>
             </CardContent>
 
             <CardFooter>
@@ -87,7 +102,8 @@ export default async function JoinQueueScreen() {
               />
             </CardFooter>
           </Card>
-        ))}
+          ),
+        )}
       </div>
 
       {/* Footer Navigation */}

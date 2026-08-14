@@ -57,6 +57,10 @@ export interface ServiceQueuePreview {
   service: Service;
   waitingCount: number;
   estimatedWaitMinutes: number;
+  /** Typical minutes to handle this service (historical avg or baseline). */
+  typicalServiceMinutes: number;
+  waitEstimateSource: "historical" | "baseline";
+  historySampleSize: number;
 }
 
 //Eduardo's User Management Types

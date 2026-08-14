@@ -36,7 +36,9 @@ export function QueuePositionHero({
           <p className="text-3xl font-semibold">
             ~ {activeQueue.estimatedWaitMinutes} min
           </p>
-          <p className="text-sm text-muted-foreground">estimated wait</p>
+          <p className="text-sm text-muted-foreground">
+            estimated wait · based on recent completions when available
+          </p>
         </div>
 
         <div className="space-y-1 text-sm text-muted-foreground">

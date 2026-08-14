@@ -127,6 +127,35 @@ describe("Queue Management and Wait-Time Logic (Prisma A4 Integration)", () => {
     });
   });
 
+  it("uses historical completion averages instead of baseline when history exists", async () => {
+    const now = Date.now();
+    // Service 1 baseline is 10 minutes; seed 20 served histories averaging ~4 minutes.
+    await prisma.queueHistory.createMany({
+      data: Array.from({ length: 20 }, (_, index) => {
+        const completedAt = new Date(now - index * 60_000);
+        const joinedAt = new Date(completedAt.getTime() - 4 * 60_000);
+        return {
+          traderName: `History ${index}`,
+          serviceId: 1,
+          joinedAt,
+          completedAt,
+          outcome: "served" as const,
+        };
+      }),
+    });
+
+    await joinQueue({ traderName: "First", serviceId: 1 });
+    await joinQueue({ traderName: "Second", serviceId: 1 });
+
+    // Position 1 waits only for the person at position 0 → historical ~4m, not baseline 10m.
+    expect(await estimateWaitForQueuePosition(1)).toBe(4);
+
+    const preview = await getServiceQueuePreview(1);
+    expect(preview.typicalServiceMinutes).toBe(4);
+    expect(preview.waitEstimateSource).toBe("historical");
+    expect(preview.historySampleSize).toBe(20);
+  });
+
   it("prevents serving another trader until the current service is completed", async () => {
     await joinQueue({ traderName: "First", serviceId: 1 });
     await joinQueue({ traderName: "Second", serviceId: 1 });

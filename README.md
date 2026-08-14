@@ -83,6 +83,12 @@ Login/register persist to Neon (`UserCredential` + `UserProfile`) with bcrypt ha
 
 Session cookie + `localStorage` identify the logged-in trader (replaces hardcoded `"John D."`). Middleware protects trader/admin pages by role. API routes require a session (admin mutations require `role: admin`). Use **Sign out** in the portal nav to clear the session.
 
+### Smart feature — dynamic wait-time estimator
+
+Wait estimates use a moving average of the last 20 *served* `QueueHistory` rows per service (`src/server/wait-time.ts`). If no history exists, they fall back to each service’s configured `expectedDurationMinutes`.
+
+`npm run db:seed` loads 20 historical completions per default service (averages intentionally differ from the baseline) plus demo traders so you can see “from last 20 completions” on Join Queue.
+
 ### Team split (remaining)
 
 | Area | Tables | Touch points |
