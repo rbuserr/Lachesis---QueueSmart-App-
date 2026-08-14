@@ -206,6 +206,24 @@ async function seedHistoryForService(input: {
 }
 
 async function main() {
+  // Queue integration tests recreate Consultation/Support/Emergency and wipe
+  // seed history. Clear those leftovers so Join Queue shows the demo services.
+  const testLeftovers = await prisma.service.findMany({
+    where: {
+      name: { in: ["Consultation", "Support", "Emergency"] },
+    },
+    select: { id: true },
+  });
+
+  if (testLeftovers.length > 0) {
+    const ids = testLeftovers.map((s) => s.id);
+    await prisma.queueHistory.deleteMany({ where: { serviceId: { in: ids } } });
+    await prisma.queueEntry.deleteMany({ where: { serviceId: { in: ids } } });
+    await prisma.queue.deleteMany({ where: { serviceId: { in: ids } } });
+    await prisma.service.deleteMany({ where: { id: { in: ids } } });
+    console.log(`Removed ${ids.length} queue-test leftover service(s).`);
+  }
+
   const admin = await upsertUser({
     email: "admin@queuesmart.com",
     fullName: "QueueSmart Administrator",
