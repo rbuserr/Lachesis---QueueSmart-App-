@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { prisma } from "@/server/db";
 import {
@@ -178,6 +178,10 @@ describe("report generation (real DB)", () => {
         description: "Created for reports.test.ts",
         expectedDurationMinutes: 5,
         priority: "low",
+        isOpen: true,
+        queues: {
+          create: { status: "open" },
+        },
       },
     });
     testServiceId = service.id;
@@ -194,9 +198,18 @@ describe("report generation (real DB)", () => {
     testHistoryId = history.id;
   });
 
+  afterEach(async () => {
+    if (testHistoryId) {
+      await prisma.queueHistory.deleteMany({ where: { id: testHistoryId } });
+    }
+    if (testServiceId) {
+      await prisma.queueEntry.deleteMany({ where: { serviceId: testServiceId } });
+      await prisma.queue.deleteMany({ where: { serviceId: testServiceId } });
+      await prisma.service.deleteMany({ where: { id: testServiceId } });
+    }
+  });
+
   afterAll(async () => {
-    await prisma.queueHistory.deleteMany({ where: { id: testHistoryId } });
-    await prisma.service.deleteMany({ where: { id: testServiceId } });
     await prisma.$disconnect();
   });
 
