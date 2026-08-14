@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Search,
   Bell,
+  FileDown,
 } from "lucide-react";
 import Image from "next/image";
 import SnakeLogo from "@/components/ui/snake-logo.png";
@@ -221,7 +222,7 @@ export default function AdminDashboard() {
 
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* TODO(notification-module): add the assigned notification/activity UI here. */}
         {/* shortcut buttons for common admin actions */}
         <Card className="transition-all hover:shadow-lg">
@@ -259,11 +260,34 @@ export default function AdminDashboard() {
               className="justify-start"
               onClick={() => router.push("/manage-queue")}
             >
-              View Queue Report
+              Manage Queue
             </Button>
           </CardContent>
         </Card>
 
+        <Card className="transition-all hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-base">Reports</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Download CSV exports of queue history and service usage.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <Button variant="outline" className="justify-start" asChild>
+              <a href="/api/reports?type=history">
+                <FileDown className="h-4 w-4" />
+                Queue Participation History
+              </a>
+            </Button>
+
+            <Button variant="outline" className="justify-start" asChild>
+              <a href="/api/reports?type=stats">
+                <FileDown className="h-4 w-4" />
+                Service Usage Statistics
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <footer>
