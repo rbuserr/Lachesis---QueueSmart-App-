@@ -87,8 +87,6 @@ Session cookie + `localStorage` identify the logged-in trader (replaces hardcode
 
 Wait estimates use a moving average of the last 20 *served* `QueueHistory` rows per service (`src/server/wait-time.ts`). If no history exists, they fall back to each service’s configured `expectedDurationMinutes`.
 
-Join Queue shows typical handling minutes and, when history exists, “from last N completions.”
-
 ### Team split (remaining)
 
 | Area | Tables | Touch points |

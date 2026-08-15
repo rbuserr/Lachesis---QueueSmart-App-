@@ -52,15 +52,7 @@ export default async function JoinQueueScreen() {
 
       {/* Services Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {previews.map(
-          ({
-            service,
-            waitingCount,
-            estimatedWaitMinutes,
-            typicalServiceMinutes,
-            waitEstimateSource,
-            historySampleSize,
-          }) => (
+        {previews.map(({ service, waitingCount, estimatedWaitMinutes }) => (
           <Card key={service.id} className="flex flex-col">
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
@@ -85,12 +77,6 @@ export default async function JoinQueueScreen() {
                   {waitingCount} {waitingCount === 1 ? "person" : "people"} ahead
                 </span>
               </div>
-              <p className="text-xs leading-relaxed">
-                Typical handling ~{typicalServiceMinutes} min
-                {waitEstimateSource === "historical"
-                  ? ` · from last ${historySampleSize} completions`
-                  : null}
-              </p>
             </CardContent>
 
             <CardFooter>
@@ -101,8 +87,7 @@ export default async function JoinQueueScreen() {
               />
             </CardFooter>
           </Card>
-          ),
-        )}
+        ))}
       </div>
 
       {/* Footer Navigation */}
