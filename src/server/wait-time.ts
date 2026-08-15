@@ -273,3 +273,45 @@ export function cloneQueueEntry(entry: {
     ...(entry.status ? { status: entry.status } : {}),
   };
 }
+export interface RecentCompletion {
+  serviceId: number;
+  serviceName: string;
+  completedAt: string;
+}
+
+/*
+ Looks for a QueueHistory record showing this trader was served within
+ the last `windowMs` (default 2 minutes).
+ 
+ The QueueStatusRefresh polls the traders status page every
+ 1.5s via router.refresh(). The moment an admin completes a service,
+ buildActiveQueue() finds nothing (the entry's status is no longer
+ "waiting"/"serving"), so the page falls back to the generic "not in a
+ queue" empty state with no message to the trader that was just served.
+ 
+ It matches by traderName, same as buildActiveQueue*/
+export async function getRecentCompletion(
+  traderName: string,
+  windowMs: number = 2 * 60 * 1000,
+): Promise<RecentCompletion | null> {
+  const normalizedName = traderName.trim().toLowerCase();
+  const cutoff = new Date(Date.now() - windowMs);
+
+  const record = await prisma.queueHistory.findFirst({
+    where: {
+      traderName: { equals: normalizedName, mode: "insensitive" },
+      outcome: "served",
+      completedAt: { gte: cutoff },
+    },
+    orderBy: { completedAt: "desc" },
+    include: { service: true },
+  });
+
+  if (!record || !record.completedAt) return null;
+
+  return {
+    serviceId: record.serviceId,
+    serviceName: record.service.name,
+    completedAt: record.completedAt.toISOString(),
+  };
+}

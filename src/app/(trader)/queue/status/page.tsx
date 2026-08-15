@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Info, ListOrdered } from "lucide-react";
+import { CheckCircle2, Info, ListOrdered } from "lucide-react";
 
 import { QueuePositionHero } from "@/components/trader/queue-position-hero";
 import { LeaveQueueButton } from "@/components/trader/leave-queue-button";
@@ -8,17 +8,54 @@ import { StatusStepper } from "@/components/trader/status-stepper";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { getActiveQueue } from "@/lib/trader/get-active-queue";
+import { getRecentCompletion } from "@/lib/trader/get-recent-completion";
 import { getServiceById } from "@/lib/trader/get-services";
 
 const alertIconClassName =
   "flex items-center gap-3 [&>svg]:static [&>svg]:shrink-0 [&>svg+div]:translate-y-0 [&>svg~*]:pl-0";
 
 export const dynamic = "force-dynamic";
-
+    /*Not actively in a queue but they might have just been served.
+    Checks for a recent completion before falling back to the generic
+    empty state ("join a Queue message"), so the trader gets a clear confirmation instead of
+    silently vanishing from the queue with no explanation.*/
 export default async function QueueStatus() {
   const activeQueue = await getActiveQueue();
 
   if (!activeQueue) {
+    const recentCompletion = await getRecentCompletion();
+
+    if (recentCompletion) {
+      return (
+        <div className="flex flex-col items-center gap-6 py-16 text-center">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Queue Status
+            </h1>
+          </div>
+
+          <CheckCircle2 className="h-12 w-12 text-green-600" /> 
+
+          <div className="max-w-md space-y-2">
+            <p className="text-lg font-medium">Your service is complete!</p>
+            <p className="text-sm text-muted-foreground">
+              A risk manager finished helping you with{" "}
+              {recentCompletion.serviceName}. Thanks for your patience.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button asChild>
+              <Link href="/dashboard">Back to Dashboard</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/queue/join">Join Another Queue</Link>
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center gap-6 py-16 text-center">
         <div className="space-y-2">
