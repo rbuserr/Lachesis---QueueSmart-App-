@@ -86,9 +86,6 @@ export function QueueOverviewCard({
             <p className="text-2xl font-semibold">
               ~{activeQueue.estimatedWaitMinutes} min
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              From recent completions when available
-            </p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">

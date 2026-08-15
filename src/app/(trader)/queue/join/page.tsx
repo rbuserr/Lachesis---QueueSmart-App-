@@ -36,8 +36,7 @@ export default async function JoinQueueScreen() {
       <div className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight">Join a Queue</h1>
         <p className="text-muted-foreground">
-          Select a support service to connect with a risk manager. Wait times
-          use recent completion history when available.
+          Select a support service to connect with a risk manager.
         </p>
       </div>
 
@@ -90,7 +89,7 @@ export default async function JoinQueueScreen() {
                 Typical handling ~{typicalServiceMinutes} min
                 {waitEstimateSource === "historical"
                   ? ` · from last ${historySampleSize} completions`
-                  : " · configured baseline (no history yet)"}
+                  : null}
               </p>
             </CardContent>
 

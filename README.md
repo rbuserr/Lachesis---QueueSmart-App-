@@ -87,7 +87,7 @@ Session cookie + `localStorage` identify the logged-in trader (replaces hardcode
 
 Wait estimates use a moving average of the last 20 *served* `QueueHistory` rows per service (`src/server/wait-time.ts`). If no history exists, they fall back to each service’s configured `expectedDurationMinutes`.
 
-`npm run db:seed` loads 20 historical completions per default service (averages intentionally differ from the baseline) plus demo traders so you can see “from last 20 completions” on Join Queue.
+Join Queue shows typical handling minutes and, when history exists, “from last N completions.”
 
 ### Team split (remaining)
 
