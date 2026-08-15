@@ -222,8 +222,52 @@ export default function AdminDashboard() {
 
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* TODO(notification-module): add the assigned notification/activity UI here. */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="transition-all hover:shadow-lg">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Queue Activity
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {snapshot.currentlyServing ? (
+              <div className="rounded-lg border p-4">
+                <p className="text-sm font-medium">
+                  Currently Serving
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {snapshot.currentlyServing.traderName}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border p-4">
+                <p className="text-sm text-muted-foreground">
+                  No trader is currently being served.
+                </p>
+              </div>
+            )}
+
+            {snapshot.entries.length > 0 ? (
+              <div className="rounded-lg border p-4">
+                <p className="text-sm font-medium">
+                  Waiting Queue
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {snapshot.entries.length} trader
+                  {snapshot.entries.length === 1 ? "" : "s"} waiting
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border p-4">
+                <p className="text-sm text-muted-foreground">
+                  No traders are currently waiting.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
         {/* shortcut buttons for common admin actions */}
         <Card className="transition-all hover:shadow-lg">
           <CardHeader>
