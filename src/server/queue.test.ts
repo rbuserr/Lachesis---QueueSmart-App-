@@ -24,6 +24,8 @@ describe("Queue Management and Wait-Time Logic (Prisma A4 Integration)", () => {
     await prisma.queueEntry.deleteMany();
     await prisma.queue.deleteMany();
     await prisma.service.deleteMany();
+    await prisma.userProfile.deleteMany();
+    await prisma.userCredential.deleteMany();
 
     // 2. Seed default services
     await prisma.service.createMany({
@@ -61,6 +63,86 @@ describe("Queue Management and Wait-Time Logic (Prisma A4 Integration)", () => {
     expect(dbEntries).toHaveLength(1);
     expect(dbEntries[0].joinedAt).toBeInstanceOf(Date);
   });
+
+  // TEST #1
+
+  it("creates a notification when an authenticated user joins a queue", async () => {
+    const user = await prisma.userCredential.create({
+      data: {
+        email: "notification-test@example.com",
+        passwordHash: "test-hash",
+        role: "user",
+      },
+    });
+
+    await joinQueue({
+      traderName: "Notification User",
+      serviceId: 1,
+      userId: user.id,
+    });
+
+    const notifications = await prisma.notification.findMany({
+      where: { userId: user.id },
+    });
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      userId: user.id,
+      message: "You successfully joined the queue for Consultation.",
+      status: "sent",
+    });
+  });
+
+
+  // TEST #2
+
+  it("notifies a user when they become close to being served", async () => {
+    const firstUser = await prisma.userCredential.create({
+      data: {
+        email: "first@example.com",
+        passwordHash: "test-hash",
+        role: "user",
+      },
+    });
+
+    const secondUser = await prisma.userCredential.create({
+      data: {
+        email: "second@example.com",
+        passwordHash: "test-hash",
+        role: "user",
+      },
+    });
+
+    await joinQueue({
+      traderName: "First User",
+      serviceId: 1,
+      userId: firstUser.id,
+    });
+
+    await joinQueue({
+      traderName: "Second User",
+      serviceId: 1,
+      userId: secondUser.id,
+    });
+
+    // Remove join notifications so we're only checking
+    // the "close to being served" notification.
+    await prisma.notification.deleteMany();
+
+    await serveNext();
+
+    const notifications = await prisma.notification.findMany({
+      where: { userId: secondUser.id },
+    });
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toMatchObject({
+      userId: secondUser.id,
+      message: "Get ready, Second User! You are close to being served.",
+      status: "sent",
+    });
+  });
+
 
   it("rejects duplicate traders and unavailable queues or services", async () => {
     await joinQueue({ traderName: "Joshua", serviceId: 1 });
