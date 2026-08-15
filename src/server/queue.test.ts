@@ -24,8 +24,6 @@ describe("Queue Management and Wait-Time Logic (Prisma A4 Integration)", () => {
     await prisma.queueEntry.deleteMany();
     await prisma.queue.deleteMany();
     await prisma.service.deleteMany();
-    await prisma.userProfile.deleteMany();
-    await prisma.userCredential.deleteMany();
 
     // 2. Seed default services
     await prisma.service.createMany({
